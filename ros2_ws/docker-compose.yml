@@ -1,0 +1,30 @@
+# Stage 3 · ROS 2 + Gazebo, containerised and headless by default.
+#
+#   docker compose -f ros2_ws/docker-compose.yml build
+#   docker compose -f ros2_ws/docker-compose.yml run --rm ros2 \
+#     ros2 launch rvc_agent tabletop.launch.py
+#
+# Works with Docker Desktop OR colima (userland, no admin password):
+#   brew install colima docker docker-compose && colima start --cpu 4 --memory 6
+
+services:
+  ros2:
+    build:
+      context: ..                      # repo root, so `src/rvc` is available
+      dockerfile: ros2_ws/Dockerfile
+    image: rvc/ros2-gazebo:jazzy
+    container_name: rvc-ros2
+    environment:
+      - ROS_DOMAIN_ID=42
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      # All nodes live in this one container, so keep DDS off the host network
+      # entirely - this also sidesteps Docker-for-Mac's host-networking quirks.
+      - ROS_LOCALHOST_ONLY=1
+      # Point the agent at a real OpenVLA server when you have one:
+      - RVC_VLA_URL=${RVC_VLA_URL:-}
+    volumes:
+      - ../src:/opt/rvc/src:ro         # live-edit the agent layer
+      - ./src:/ws/src                  # live-edit the ROS 2 nodes
+      - ../runs:/ws/runs               # rollout artifacts land on the host
+    stdin_open: true
+    tty: true

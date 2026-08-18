@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot Vision Copilot</title>
+<style>
+  :root{
+    --bg:#0e1014; --panel:#171a21; --line:#262b36; --fg:#e6e9ef; --mut:#8b94a7;
+    --ok:#3ddc97; --warn:#ffc857; --err:#ff6b6b; --acc:#5aa9ff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: light){
+    :root{--bg:#f6f7f9;--panel:#fff;--line:#e2e5ea;--fg:#1a1d23;--mut:#5d6675;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:14px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Segoe UI",sans-serif}
+  header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;
+         align-items:baseline;gap:14px;flex-wrap:wrap}
+  h1{font-size:17px;margin:0;letter-spacing:.2px}
+  .sub{color:var(--mut);font-size:12px}
+  main{max-width:1180px;margin:0 auto;padding:20px;display:grid;gap:18px}
+  .grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .card h2{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:.09em;
+           color:var(--mut);font-weight:600}
+  .banner{border-radius:10px;padding:12px 16px;font-weight:600;border:1px solid}
+  .b-warn{background:rgba(255,200,87,.12);border-color:var(--warn);color:var(--warn)}
+  .b-ok{background:rgba(61,220,151,.12);border-color:var(--ok);color:var(--ok)}
+  .banner small{display:block;font-weight:400;opacity:.85;margin-top:5px;line-height:1.5}
+  dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13px}
+  dt{color:var(--mut)} dd{margin:0;font-family:var(--mono);word-break:break-all}
+  label{display:block;font-size:12px;color:var(--mut);margin:9px 0 3px}
+  select,input,button{font:inherit;background:var(--bg);color:var(--fg);
+        border:1px solid var(--line);border-radius:7px;padding:7px 10px;width:100%}
+  button{background:var(--acc);border-color:var(--acc);color:#04121f;font-weight:650;
+         cursor:pointer;margin-top:13px}
+  button:disabled{opacity:.55;cursor:progress}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px}
+  th,td{text-align:left;padding:4px 7px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--mut);font-weight:600;position:sticky;top:0;background:var(--panel)}
+  .scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+  .pill{display:inline-block;padding:1px 7px;border-radius:99px;font-size:10.5px;font-weight:700}
+  .s-EXECUTE{background:rgba(61,220,151,.18);color:var(--ok)}
+  .s-RECOVER{background:rgba(255,107,107,.18);color:var(--err)}
+  .s-VERIFY,.s-PERCEIVE,.s-PLAN{background:rgba(90,169,255,.15);color:var(--acc)}
+  img.roll{width:100%;border-radius:8px;border:1px solid var(--line);image-rendering:pixelated}
+  pre{margin:0;font-family:var(--mono);font-size:11.5px;white-space:pre-wrap;color:var(--mut)}
+  .muted{color:var(--mut);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Robot Vision Copilot</h1>
+  <span class="sub">OpenVLA 动作模型 + Agent 状态机 · Stage 2 可观察服务</span>
+</header>
+
+<main>
+  <div id="banner"></div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Health / 主机与后端</h2>
+      <dl id="health"><dt>状态</dt><dd>loading…</dd></dl>
+    </section>
+
+    <section class="card">
+      <h2>运行一个 Episode</h2>
+      <div class="row">
+        <div><label>后端 backend</label>
+          <select id="backend">
+            <option value="auto">auto（自动降级）</option>
+            <option value="openvla-local">openvla-local</option>
+            <option value="openvla-remote">openvla-remote</option>
+            <option value="mock">mock</option>
+          </select></div>
+        <div><label>注入故障 inject</label>
+          <select id="inject">
+            <option value="none">none</option>
+            <option value="target_lost">target_lost 目标丢失</option>
+            <option value="grasp_fail">grasp_fail 抓取失败</option>
+            <option value="grasp_slip">grasp_slip 运输滑落</option>
+          </select></div>
+      </div>
+      <div class="row">
+        <div><label>模式 mode</label>
+          <select id="mode"><option value="subgoal">subgoal 子目标拆解</option>
+          <option value="e2e">e2e 整句直接给模型</option></select></div>
+        <div><label>最大步数</label><input id="maxsteps" type="number" value="160" min="20" max="600"></div>
+      </div>
+      <button id="run">▶ 运行 Episode</button>
+      <p class="muted" id="runstatus"></p>
+    </section>
+  </div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Rollout 回放</h2>
+      <div id="gifbox"><p class="muted">运行一个 episode 后在这里显示。</p></div>
+      <dl id="epi" style="margin-top:12px"></dl>
+    </section>
+
+    <section class="card">
+      <h2>状态机时间线</h2>
+      <div class="scroll"><table><thead><tr><th>step</th><th>from</th><th>to</th><th>reason</th></tr></thead>
+      <tbody id="timeline"><tr><td colspan="4" class="muted">—</td></tr></tbody></table></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>动作日志 actions.jsonl</h2>
+    <div class="scroll"><table><thead><tr>
+      <th>step</th><th>state</th><th>subgoal</th><th>dx</th><th>dy</th><th>dz</th>
+      <th>grip</th><th>hold</th><th>valid</th><th>ms</th><th>instruction</th>
+    </tr></thead><tbody id="steps"><tr><td colspan="11" class="muted">—</td></tr></tbody></table></div>
+  </section>
+
+  <section class="card">
+    <h2>历史运行</h2>
+    <div class="scroll"><table><thead><tr>
+      <th>run_id</th><th>结果</th><th>steps</th><th>recoveries</th><th>inject</th><th>degraded</th>
+    </tr></thead><tbody id="runs"><tr><td colspan="6" class="muted">—</td></tr></tbody></table></div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+async function loadHealth(){
+  const h = await (await fetch("/health")).json();
+  $("health").innerHTML = [
+    ["状态", h.status], ["model_loaded", h.model_loaded],
+    ["后端", h.backend.name + " (" + h.backend.kind + ")"],
+    ["主机", h.host.cpu + " · " + h.host.ram_gb + "GB RAM · " + h.host.disk_free_gb + "GB free"],
+    ["CUDA / MPS", h.host.cuda + " / " + h.host.mps],
+    ["OpenVLA 本地", h.capabilities.openvla_local.available ? "可用" : h.capabilities.openvla_local.reason],
+    ["LIBERO", h.capabilities.libero.available ? "可用" : h.capabilities.libero.reason],
+  ].map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+
+  $("banner").innerHTML = h.model_loaded
+    ? `<div class="banner b-ok">✓ 真实 VLA 已加载：${esc(h.backend.name)}</div>`
+    : `<div class="banner b-warn">⚠ 降级模式 DEGRADED — 动作不是 OpenVLA 推理结果
+        <small>${esc(h.backend.degraded_reason)}</small></div>`;
+}
+
+async function loadRuns(){
+  const rs = await (await fetch("/runs?limit=25")).json();
+  $("runs").innerHTML = rs.length ? rs.map(r => `<tr>
+      <td><a href="#" data-run="${esc(r.run_id)}">${esc(r.run_id)}</a></td>
+      <td>${r.success ? "✓ SUCCESS" : "✗ FAIL"}</td><td>${r.steps}</td>
+      <td>${r.recoveries}</td><td>${esc(r.injected_fault)}</td>
+      <td>${r.degraded ? "yes" : "no"}</td></tr>`).join("")
+    : `<tr><td colspan="6" class="muted">还没有运行记录</td></tr>`;
+  $("runs").querySelectorAll("a[data-run]").forEach(a =>
+    a.onclick = e => { e.preventDefault(); showRun(a.dataset.run); });
+}
+
+async function showRun(runId){
+  const d = await (await fetch("/runs/" + encodeURIComponent(runId))).json();
+  const s = d.summary;
+  $("gifbox").innerHTML = d.has_gif
+    ? `<img class="roll" src="/runs/${encodeURIComponent(runId)}/frames/rollout.gif?t=${Date.now()}">`
+    : `<p class="muted">该次运行没有保存图像。</p>`;
+  $("epi").innerHTML = [
+    ["run_id", runId], ["结果", s.success ? "SUCCEEDED" : "FAILED"],
+    ["最终状态", s.final_state], ["失败类型", s.failure],
+    ["步数 / 恢复", s.steps + " / " + s.recoveries],
+    ["注入故障", s.injected_fault], ["动作来源", s.backend],
+    ["degraded", s.degraded ? "YES — " + s.degraded_reason : "no"],
+  ].map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+  $("steps").innerHTML = d.steps.map(r => `<tr>
+      <td>${r.step}</td><td><span class="pill s-${esc(r.state)}">${esc(r.state)}</span></td>
+      <td>${esc(r.subgoal)}</td>
+      <td>${r.action[0].toFixed(2)}</td><td>${r.action[1].toFixed(2)}</td>
+      <td>${r.action[2].toFixed(2)}</td><td>${r.action[6].toFixed(0)}</td>
+      <td>${r.holding ? "✓" : "·"}</td><td>${r.validated ? "ok" : "REJECT"}</td>
+      <td>${r.latency_ms}</td><td>${esc(r.instruction)}</td></tr>`).join("")
+    || `<tr><td colspan="11" class="muted">no steps</td></tr>`;
+}
+
+$("run").onclick = async () => {
+  const btn = $("run"); btn.disabled = true; $("runstatus").textContent = "运行中…";
+  try{
+    const r = await fetch("/episode", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({backend:$("backend").value, inject:$("inject").value,
+        mode:$("mode").value, max_steps:+$("maxsteps").value})});
+    if(!r.ok) throw new Error(await r.text());
+    const e = await r.json();
+    $("runstatus").textContent =
+      `${e.success ? "SUCCEEDED" : "FAILED"} · ${e.steps} 步 · ${e.recoveries} 次恢复 · ${e.wall_time_s}s`;
+    $("timeline").innerHTML = e.state_timeline.map(t => `<tr>
+        <td>${t.step}</td><td>${esc(t.from)}</td>
+        <td><span class="pill s-${esc(t.to)}">${esc(t.to)}</span></td>
+        <td style="white-space:normal">${esc(t.reason)}</td></tr>`).join("");
+    await showRun(e.run_id); await loadRuns();
+  }catch(err){ $("runstatus").textContent = "失败: " + err.message; }
+  finally{ btn.disabled = false; }
+};
+
+loadHealth(); loadRuns();
+</script>
+</body>
+</html>

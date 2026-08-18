@@ -1,0 +1,29 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install (base + api + dev only — no torch, no simulators)
+        run: python -m pip install -e ".[api,dev]"
+      - name: Lint
+        run: ruff check src tests
+      - name: Unit tests
+        # LIBERO / YOLO / ROS-dependent tests skip themselves when the deps
+        # are absent; the agent runtime, validators, planners, sequencer and
+        # API are fully covered on plain CPU.
+        run: pytest -q tests
+      - name: Agent-runtime eval (smoke, 40 seeded episodes)
+        run: python -m rvc.runners.eval --episodes 40 --out /tmp/rvc-eval

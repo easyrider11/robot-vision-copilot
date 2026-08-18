@@ -1,0 +1,105 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "robot-vision-copilot"
+version = "0.1.0"
+description = "Teaching-oriented Robot Vision Copilot: OpenVLA action model + ROS 2-style agent layer"
+requires-python = ">=3.10,<3.14"
+
+# Stage 1 baseline. Deliberately tiny: the minimal demo must run on a laptop
+# with no GPU, no CUDA and very little free disk.
+dependencies = [
+    "numpy>=1.24",
+    "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+# Stage 2 - FastAPI observability service.
+api = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "python-multipart>=0.0.9",
+    "httpx>=0.27",
+]
+
+# Real OpenVLA-7B inference. ~15 GB of weights + a CUDA GPU with >=16 GB VRAM.
+# NOT installable on the audited MacBook Air M3 - see docs/00-environment-audit.md.
+vla = [
+    "torch>=2.2",
+    "torchvision>=0.17",
+    "transformers>=4.40,<4.46",
+    "tokenizers>=0.19",
+    "timm==0.9.10",
+    "accelerate>=0.30",
+    "huggingface-hub>=0.23",
+]
+
+# LIBERO simulation benchmark. VERIFIED WORKING on macOS 15.5 / M3 / arm64.
+# Install with `make setup-libero`, which also vendors the repo clone that
+# LIBERO needs (its setup.py cannot package itself - see libero_bootstrap.py).
+#
+# Two pins matter and are not negotiable:
+#   mujoco <3.3  - 3.3.0 removed MjData.qM, which robosuite 1.4.x still calls
+#   robosuite 1.4.1 - the version LIBERO was written against
+#
+# Do NOT install LIBERO's own requirements.txt: it pins numpy==1.22.4 and pulls
+# robomimic/wandb/transformers for their *training* code, none of which the
+# simulator needs. The list below is exactly what `libero/libero/**` imports.
+libero = [
+    "robosuite==1.4.1",
+    "mujoco>=3.2,<3.3",
+    "bddl>=1.0.1",
+    "easydict",
+    "torch>=2.0",          # libero.libero.benchmark imports it at module scope
+    "matplotlib>=3.5",     # libero.libero.envs.env_wrapper
+    "cloudpickle>=2.1",    # libero.libero.envs.venv
+    "gym>=0.25",           # libero.libero.envs
+    "h5py>=3.8",
+    "huggingface-hub>=0.23",
+    "pyyaml>=6.0",
+    "opencv-python>=4.9",
+    "imageio[ffmpeg]>=2.34",
+]
+
+# Stage 3 perception (YOLO / OpenCV overlays).
+vision = [
+    "ultralytics>=8.3",
+    "opencv-python>=4.9",
+]
+
+# Optional LLM task planner (Anthropic SDK). Never required by any stage.
+llm = ["anthropic>=0.50"]
+
+dev = ["pytest>=8.0", "ruff>=0.5"]
+
+[project.scripts]
+rvc-audit = "rvc.runners.audit:main"
+rvc-demo = "rvc.runners.demo_libero:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rvc"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# Pinned explicitly so `make lint` means the same thing across ruff versions.
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    # Probe/resolve functions are contractually forbidden from raising - they
+    # must return (ok, reason) instead. Broad excepts there are the design.
+    "BLE001",
+    # Class-level lookup tables (TabletopSim.TASKS, ColorDetector.SPECS) are
+    # read-only registries, not mutable defaults.
+    "RUF012",
+    # This codebase is deliberately bilingual: docs and terminal output are in
+    # Chinese, so full-width punctuation and ×/→/· are intentional, not typos.
+    "RUF001", "RUF002", "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["RUF059"]  # `agent, r = _run(...)` reads better than `_agent, r`
