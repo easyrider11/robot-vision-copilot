@@ -1,0 +1,10 @@
+# ros2 run rvc_agent agent_node --ros-args --params-file config/agent.yaml
+rvc_agent:
+  ros__parameters:
+    # auto -> openvla-local -> openvla-remote -> mock, same as Stages 1/2.
+    # Set RVC_VLA_URL in the container to reach a cloud GPU running
+    # `uvicorn rvc.service.vla_server:app`.
+    backend: "auto"
+    instruction: "pick up the red block and place it in the blue box"
+    target_label: "red_block"
+    max_recoveries: 3

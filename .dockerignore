@@ -1,0 +1,13 @@
+# Keep the build context tiny: the image only needs pyproject.toml, src/ and ros2_ws/src.
+.venv/
+external/
+runs/
+docs/
+tests/
+scripts/
+.git/
+.pytest_cache/
+.ruff_cache/
+**/__pycache__/
+*.gif
+*.png
