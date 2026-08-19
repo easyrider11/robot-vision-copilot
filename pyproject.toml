@@ -73,6 +73,9 @@ vision = [
 # Optional LLM task planner (Anthropic SDK). Never required by any stage.
 llm = ["anthropic>=0.50"]
 
+# LIBERO behaviour-cloning baseline (learned policy, not a VLA). Needs [libero] too.
+bc = ["torch>=2.2", "torchvision>=0.17", "h5py>=3.10", "huggingface-hub>=0.23"]
+
 dev = ["pytest>=8.0", "ruff>=0.5"]
 
 [project.scripts]

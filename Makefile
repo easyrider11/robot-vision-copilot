@@ -124,6 +124,16 @@ help:
 eval: $(VENV)                ## 批量评测 Agent 栈：500 seeded 回合，输出恢复率/非法动作率/p95 时延
 	@$(PY) -m rvc.runners.eval --episodes $(or $(EPISODES),500)
 
+.PHONY: bc-data bc-train bc-eval
+bc-data: $(VENV)             ## BC 基线 1/3：下载一个 LIBERO 任务的 50 条人类示教（~0.5 GB）
+	@$(PY) -m rvc.runners.bc data --suite $(SUITE) --task-index $(TASKIDX)
+
+bc-train: $(VENV)            ## BC 基线 2/3：本机训练 ResNet18x2+MLP 行为克隆（MPS，约 10 分钟）
+	@$(PY) -m rvc.runners.bc train --suite $(SUITE) --task-index $(TASKIDX) --epochs $(or $(EPOCHS),30)
+
+bc-eval: $(VENV)             ## BC 基线 3/3：在真实 LIBERO 上评测成功率（经 agent 运行时）
+	@$(PY) -m rvc.runners.bc eval --suite $(SUITE) --task-index $(TASKIDX) --episodes $(or $(EPISODES),20)
+
 .PHONY: play
 play: $(VENV)                ## 交互式 playground：自然语言指令 + 故障注入 + GIF 导出
 	@$(PY) -m rvc.runners.play

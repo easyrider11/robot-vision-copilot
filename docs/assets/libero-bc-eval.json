@@ -1,0 +1,446 @@
+{
+  "provenance": {
+    "policy": "bc-libero (ResNet18x2+MLP behaviour cloning, NOT a VLA, no language)",
+    "checkpoint": "/Users/PC/code/robot-vision-copilot/models/bc-libero-spatial-0.pt",
+    "checkpoint_meta": {
+      "kind": "bc-libero",
+      "hdf5": "/Users/PC/code/robot-vision-copilot/external/libero-datasets/libero_spatial/pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate_demo.hdf5",
+      "config": {
+        "epochs": 30,
+        "batch_size": 64,
+        "lr": 0.0003,
+        "weight_decay": 0.0001,
+        "shift_pad": 6,
+        "val_demos": 5,
+        "pretrained": true,
+        "seed": 0
+      },
+      "proprio_mean": [
+        -0.021262839436531067,
+        0.1322309970855713,
+        1.0233652591705322,
+        0.021730873733758926,
+        -0.02228412590920925
+      ],
+      "proprio_std": [
+        0.07765617966651917,
+        0.04570271819829941,
+        0.08853704482316971,
+        0.01687469147145748,
+        0.016481300815939903
+      ],
+      "train_time_s": 1156.8,
+      "device": "mps",
+      "provenance": "Behaviour cloning on LIBERO human demos - a learned policy, NOT a VLA. No language conditioning; single task."
+    },
+    "env": "LIBERO libero_spatial task 0, 128x128, init states 0..49, max_steps 220",
+    "runtime": "RobotAgent e2e mode + ActionValidator (no recovery, no planner)"
+  },
+  "episodes": 50,
+  "successes": 25,
+  "success_rate": 0.5,
+  "mean_steps": 158.1,
+  "wall_time_s": 351.1,
+  "per_episode": [
+    {
+      "init_state": 0,
+      "success": true,
+      "steps": 110,
+      "policy_ms_p50": 7.7,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 1,
+      "success": true,
+      "steps": 124,
+      "policy_ms_p50": 7.1,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 2,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 7.0,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 3,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 7.1,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 4,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 7.5,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 5,
+      "success": true,
+      "steps": 198,
+      "policy_ms_p50": 6.9,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 6,
+      "success": true,
+      "steps": 111,
+      "policy_ms_p50": 7.2,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 7,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 7.6,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 8,
+      "success": true,
+      "steps": 109,
+      "policy_ms_p50": 7.0,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 9,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 6.7,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 10,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 7.3,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 11,
+      "success": true,
+      "steps": 85,
+      "policy_ms_p50": 6.9,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 12,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 6.8,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 13,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 7.4,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 14,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 6.8,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 15,
+      "success": true,
+      "steps": 104,
+      "policy_ms_p50": 6.8,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 16,
+      "success": true,
+      "steps": 105,
+      "policy_ms_p50": 7.2,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 17,
+      "success": true,
+      "steps": 86,
+      "policy_ms_p50": 7.0,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 18,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.3,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 19,
+      "success": true,
+      "steps": 115,
+      "policy_ms_p50": 14.7,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 20,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.5,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 21,
+      "success": true,
+      "steps": 85,
+      "policy_ms_p50": 14.6,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 22,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.6,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 23,
+      "success": true,
+      "steps": 88,
+      "policy_ms_p50": 14.5,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 24,
+      "success": true,
+      "steps": 97,
+      "policy_ms_p50": 14.4,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 25,
+      "success": true,
+      "steps": 88,
+      "policy_ms_p50": 14.1,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 26,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.5,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 27,
+      "success": true,
+      "steps": 127,
+      "policy_ms_p50": 14.4,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 28,
+      "success": true,
+      "steps": 97,
+      "policy_ms_p50": 14.4,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 29,
+      "success": true,
+      "steps": 80,
+      "policy_ms_p50": 14.7,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 30,
+      "success": true,
+      "steps": 98,
+      "policy_ms_p50": 14.8,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 31,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.5,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 32,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.6,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 33,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.6,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 34,
+      "success": true,
+      "steps": 85,
+      "policy_ms_p50": 14.4,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 35,
+      "success": true,
+      "steps": 118,
+      "policy_ms_p50": 14.6,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 36,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.5,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 37,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.6,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 38,
+      "success": true,
+      "steps": 105,
+      "policy_ms_p50": 14.4,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 39,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.6,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 40,
+      "success": true,
+      "steps": 91,
+      "policy_ms_p50": 14.6,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 41,
+      "success": false,
+      "steps": 64,
+      "policy_ms_p50": 14.5,
+      "rejections": 1,
+      "clamps": 0
+    },
+    {
+      "init_state": 42,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.5,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 43,
+      "success": true,
+      "steps": 85,
+      "policy_ms_p50": 14.5,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 44,
+      "success": true,
+      "steps": 86,
+      "policy_ms_p50": 14.6,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 45,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.6,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 46,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.4,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 47,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.6,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 48,
+      "success": true,
+      "steps": 83,
+      "policy_ms_p50": 14.5,
+      "rejections": 0,
+      "clamps": 0
+    },
+    {
+      "init_state": 49,
+      "success": false,
+      "steps": 220,
+      "policy_ms_p50": 14.4,
+      "rejections": 0,
+      "clamps": 0
+    }
+  ]
+}

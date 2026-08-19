@@ -8,8 +8,10 @@
   <img src="docs/assets/gazebo-pickplace.gif" width="256" alt="Gazebo 抓取放置">
   &nbsp;&nbsp;
   <img src="docs/assets/tabletop-grasp-slip-recovery.gif" width="256" alt="桌面仿真：注入滑落后恢复">
+  &nbsp;&nbsp;
+  <img src="docs/assets/libero-bc-success.gif" width="128" alt="LIBERO：行为克隆基线回放">
 </p>
-<p align="center"><sub>左：Gazebo 里纯像素闭环的 pick-and-place（吸附抓取 + 关节反馈确认 + 像素验收，12.2 秒）。右：桌面仿真中途注入滑落 —— agent 检测到、重规划、完成任务。</sub></p>
+<p align="center"><sub>左：Gazebo 里纯像素闭环的 pick-and-place（吸附抓取 + 关节反馈确认 + 像素验收，12.2 秒）。中：桌面仿真中途注入滑落 —— agent 检测到、重规划、完成任务。右：LIBERO：本机训出来的行为克隆基线把碗拿起放到盘子上。</sub></p>
 
 ---
 
@@ -43,7 +45,7 @@ OpenVLA 这类视觉-语言-动作模型只回答一个问题：*给定这张相
 
 | 层 | 现在真正在跑的 | 已建好、等 GPU 的 |
 |---|---|---|
-| 动作模型 | `ScriptedMockPolicy`（读仿真状态，仅桌面仿真）与 `VisualServoPolicy`（**纯像素**，Gazebo 用）—— 两者出现在哪里都标 `degraded=true` | `openvla_local.py`（transformers，预检显存/磁盘）与 `openvla_remote.py` + `vla_server.py`（7B 前向放云 GPU、机器人栈留本地）；prompt 模板与 `unnorm_key` 配对已就位 |
+| 动作模型 | `ScriptedMockPolicy`（读仿真状态，仅桌面仿真）、`VisualServoPolicy`（**纯像素**，Gazebo 用）与 **`LiberoBCPolicy`** —— 用 LIBERO 的 50 条人类示教在本机行为克隆出来的 ResNet18×2+MLP，真实基准上的真学习策略 —— 出现在哪里都标 `degraded=true`（"不是 VLA"） | `openvla_local.py`（transformers，预检显存/磁盘）与 `openvla_remote.py` + `vla_server.py`（7B 前向放云 GPU、机器人栈留本地）；prompt 模板与 `unnorm_key` 配对已就位 |
 | 感知 | `ColorDetector`（RGB 阈值）与一个**微调过的 YOLO11n**（自动标注的合成数据） | — |
 | 规划器 | `RuleBasedPlanner`（确定性恢复表）；`LLMPlanner` 代码路径完整（结构化输出、有边界的重规划），仅在存在 Anthropic key 时激活 | — |
 | 仿真器 | 桌面仿真、**LIBERO**（已装，24 ms/step，等一个真策略）、**Gazebo Harmonic + ROS 2 Jazzy**（colima 容器） | — |
@@ -61,9 +63,11 @@ OpenVLA 这类视觉-语言-动作模型只回答一个问题：*给定这张相
 | 控制环时延（完整 PERCEIVE→VERIFY 一圈） | **p95 0.44 ms**，p99 0.90 ms | `make eval` |
 | Gazebo 抓取放置（像素 + 关节反馈） | INIT→…→VERIFY→**DONE，12.2 秒**，放置偏差 14 px | `make ros-up` |
 | Gazebo 视觉伺服到达 | SUCCEEDED，1.8 秒 | `make ros-up` |
+| Gazebo 真实故障注入（关节真松开 / 真生成遮挡模型） | 搬运中吸附失效 → 关节反馈 **40 ms** 判定 → 再抓 → DONE；4 秒遮挡 → 目标丢失 → 2 次恢复 → DONE | 容器内 `fault_inject.py` |
+| **LIBERO 行为克隆基线**（ResNet18×2+MLP，50 条示教，单任务，MPS 上 19 分钟训完 —— 学习策略，**不是 VLA**） | 50 个官方初始状态上成功率 **50 % (25/50)**，推理 7–15 ms/步 | `make bc-data bc-train bc-eval` |
 | LIBERO 在 Apple 芯片上的仿真 | 24 ms/step（双 256² 相机，`MUJOCO_GL=cgl`） | `make setup-libero` |
 | 学习型检测器（YOLO11n，合成数据，MPS） | 150 帧 held-out 合成测试集上 P 0.996 / R 0.996（颜色阈值：0.967 / 0.963）；~9 ms/帧；40 epochs ≈ 10 分钟 | `make yolo` |
-| 测试 | 63 个（依赖 LIBERO/YOLO 的在缺依赖时自动跳过） | `make test` |
+| 测试 | 72 个（依赖 LIBERO/YOLO/BC 的在缺依赖时自动跳过） | `make test` |
 
 评测报告的 `provenance` 字段明确写着：测的是 **Agent 运行时**，不是任何 VLA。
 
@@ -95,6 +99,7 @@ make demo-libero                      # 脚本化 rollout，逐步解释 + 产�
 make demo-recover                     # 连续演示三种故障注入
 make eval EPISODES=200                # 批量指标
 make serve                            # FastAPI + Web 面板 http://127.0.0.1:8080（GET /health, POST /infer, POST /episode）
+make bc-data bc-train bc-eval         # LIBERO 行为克隆基线：示教 -> MPS 训练 -> 成功率
 ```
 
 ## 阶段
@@ -109,6 +114,7 @@ make serve                            # FastAPI + Web 面板 http://127.0.0.1:80
 | 2 | FastAPI 可观察服务 + 自包含 Web 面板 | ✅ | [02](docs/02-service.md) |
 | 3 | 容器里的 ROS 2 Jazzy + Gazebo Harmonic：悬浮夹爪、视觉伺服、DetachableJoint 抓取、九阶段 pick-and-place | ✅ | [03](docs/03-ros2-gazebo.md) |
 | 3+ | 学习型感知（YOLO11n 微调于自动标注合成数据）、可选 LLM 规划器 | ✅ | [06](docs/06-perception-yolo.md) |
+| 3++ | **VLA 之外的路径**：本机训练并评测的 LIBERO 行为克隆基线；Gazebo 真实故障注入；由此暴露的夹爪符号契约 bug | ✅ | [08](docs/08-bc-baseline.md) · [03](docs/03-ros2-gazebo.md) |
 | 4 | 真实 OpenVLA 推理 + LIBERO 评测、LoRA 微调 | 📄 已文档化，需要 GPU | [04](docs/04-real-openvla.md) |
 
 ## 值得知道的设计决策
@@ -119,6 +125,8 @@ make serve                            # FastAPI + Web 面板 http://127.0.0.1:80
 - **每条执行器指令都闭环到传感器反馈。** 第一次 Gazebo 运行拖着一个隐形连接的方块跑，因为 fire-and-forget 的 `detach` 消息在 gz-transport 发现窗口里丢了。INIT/GRASP/RELEASE 现在重发直到 `/gripper/attached_state` 确认 —— 等价于吸盘的真空传感器。
 - **序列器和伺服是纯 Python，ROS 节点只做管道。** 单元测试里 30 行的玩具运动学仿真，在 Gazebo 启动之前就抓到了两个设计 bug（过早检查抓取；从遮挡目标的位姿重新感知）。
 - **LLM 是可选的、被关在盒子里的。** `LLMPlanner` 拆解任务、选择恢复点，但只能选择*已有*的、在失败点或之前的子目标 id；其他一切 —— 编造的动作、跳步、坏 JSON、拒答、超时 —— 都落回确定性表格并记录原因。结构化输出让 JSON 从构造上就合法。
+- **契约错过一次，而且没有任何东西抓住它。** 夹爪符号曾写成"0 = 开"—— 与 OpenVLA dataloader 约定相反。每个组件都和*某个*符号自洽，所以测试全绿；LIBERO 的 hdf5 动作逼着把约定落到纸面，才暴露出来。已改为 OpenVLA 约定（1 = 开），并用 `tests/test_contract.py` 把枚举、LIBERO 映射、仿真、mock、校验器钉在有据可查的外部来源上。教训：一个约定写在两处就会漂移 —— 要钉在外部参考上。
+- **恢复预算要覆盖时间，不只是次数。** Gazebo 里 3 秒遮挡在约 1 秒内烧光 3 次恢复（10 Hz 下退开→看→丢→退开）。RECOVER 现在停留 1 秒再重新接近；4 秒遮挡只花 2 次。
 - **带免费标签的合成数据。** 仿真器知道自己把每个物体画在哪，所以给自己的帧打标签；`make yolo` 渲染数据集、在 Apple MPS 上约十分钟微调 YOLO11n，并通过 agent 用的*同一个* `Detector` 接口评测，与阈值检测器并排对比。
 
 ## 仓库结构
@@ -127,21 +135,21 @@ make serve                            # FastAPI + Web 面板 http://127.0.0.1:80
 src/rvc/
   types.py                  Action / Observation / AgentState / FailureKind / 日志记录
   compat.py                 策略 × 环境兼容性检查（拦住无意义组合）
-  policies/                 mock · visual_servo · openvla_local · openvla_remote · registry
+  policies/                 mock · visual_servo · bc_libero（BC 基线）· openvla_local · openvla_remote · registry
   envs/                     tabletop（零依赖）· libero_env + libero_bootstrap · base 协议
   agent/                    state_machine · validators · planner (+ llm_anthropic) · pickplace · verifier
   perception/               detector（颜色 + YOLO 同一接口）· yolo_train（数据 → 训练 → 评测）
   service/                  app.py（FastAPI + 面板）· vla_server.py（GPU 侧推理服务）
-  runners/                  audit · demo_libero · eval · play
-ros2_ws/                    Dockerfile · compose · rvc_agent（SDF 世界、launch、agent_node、frame_grab）
-tests/                      63 个测试
-docs/                       阶段文档 00–06 + 资产
+  runners/                  audit · demo_libero · eval · play · bc（data/train/eval）
+ros2_ws/                    Dockerfile · compose · rvc_agent（SDF 世界、launch、agent_node、frame_grab、fault_inject）
+tests/                      72 个测试
+docs/                       阶段文档 00–08 + 资产
 scripts/                    setup_libero.sh · setup_ros2.sh · smoke_api.sh
 ```
 
 ## 依赖与约束
 
-- Python 3.10–3.13、[`uv`](https://github.com/astral-sh/uv)。基础安装只有 numpy + pillow；更重的都是可选 extra（`api`、`libero`、`vision`、`llm`、`vla`）。
+- Python 3.10–3.13、[`uv`](https://github.com/astral-sh/uv)。基础安装只有 numpy + pillow；更重的都是可选 extra（`api`、`libero`、`vision`、`bc`、`llm`、`vla`）。
 - ROS 2 / Gazebo 跑在容器里；macOS 上 `make ros-up` 安装 colima（用户态、无 sudo）并构建 3.9 GB 无头镜像。
 - 项目从不用 `sudo`、不碰全局 Python、不在未确认时下载模型权重。
 
@@ -150,7 +158,7 @@ scripts/                    setup_libero.sh · setup_ros2.sh · smoke_api.sh
 1. 租 GPU 跑真实 OpenVLA：那边 `make serve-vla`，这边 `make demo-libero BACKEND=openvla-remote ENV=libero` —— 代码路径已在，LIBERO 基线已就绪。
 2. 有评测基线之后再做 LoRA 微调。
 3. 用 Panda 机械臂 + MoveIt Servo 替换悬浮夹爪（节点已经在发 `TwistStamped`）。
-4. 在 Gazebo 里做故障注入（扰动力、临时遮挡物），对齐桌面仿真。
+4. 多任务 / 语言条件的 BC 扩展到更多 LIBERO 任务（单任务基线已就位），有 GPU 时再与真实 OpenVLA 检查点对比。
 
 ## 许可
 

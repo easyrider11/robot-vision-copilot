@@ -222,3 +222,39 @@ def test_no_odometry_means_no_z_motion():
     seq.phase = "DESCEND"
     cmd = seq.step(PickInput(target=None, pad=None, marker=None, z=None))
     assert cmd.vz == 0.0, "without odometry the sequencer must not guess heights"
+
+
+def test_transient_occlusion_does_not_exhaust_the_recovery_budget():
+    """Regression for the Gazebo occluder injection: a few seconds of
+    target-lost must cost a couple of recoveries, not the whole budget. The
+    RECOVER dwell is what turns 'attempts' into time coverage."""
+    class OccludeSim(ToySim):
+        def __init__(self):
+            super().__init__()
+            self.tick = 0
+
+        def observe(self):
+            obs = super().observe()
+            self.tick += 1
+            if 4 <= self.tick <= 44 and not self.attached:  # ~4 s at 10 Hz
+                obs.target = None
+            return obs
+
+    import rvc.agent.pickplace as pp
+
+    # with the dwell: the occlusion is survivable within the budget
+    sim, seq = OccludeSim(), _seq(max_recoveries=3)
+    cmd, phases = _run(sim, seq)
+    assert cmd.done, f"should finish once the occlusion clears, got {cmd.failure}"
+    assert 1 <= seq.recoveries <= 3
+
+    # without it (the original behaviour): attempts fire every few ticks and the
+    # same occlusion exhausts the budget -> FAILED. This is what Gazebo showed.
+    saved = pp.RECOVER_DWELL_TICKS
+    pp.RECOVER_DWELL_TICKS = 0
+    try:
+        sim2, seq2 = OccludeSim(), _seq(max_recoveries=3)
+        cmd2, _ = _run(sim2, seq2)
+    finally:
+        pp.RECOVER_DWELL_TICKS = saved
+    assert cmd2.failed and "target_lost" in cmd2.failure

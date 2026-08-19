@@ -68,6 +68,12 @@ HOLD_TICKS = 3  # dwell after attach/detach commands
 CONFIRM_TIMEOUT = 20  # ticks (2 s) to wait for joint-state confirmation
 LEFT_BEHIND_PX = 30.0  # visible target farther than this from the marker => not carried
 TRANSPORT_SETTLE = 4  # consecutive in-tolerance ticks to call transport done
+# Dwell at the recovery pose before re-approaching. Without it a transient
+# occlusion burns the whole recovery budget in ~1 s (retreat -> look -> lost
+# -> retreat ... at 10 Hz); found with the Gazebo occluder injection, where a
+# 3 s panel consumed all 3 attempts. The budget counts attempts; the dwell
+# makes each attempt cover real time.
+RECOVER_DWELL_TICKS = 10
 VERIFY_TICKS = 6  # frames to wait for the dropped block to be (re)detected
 
 
@@ -185,7 +191,9 @@ class PickPlaceSequencer:
             eu, ev = self.servo.status.error_px
             clear = float(np.hypot(eu, ev)) < RETREAT_TOL_PX
             if at_z and clear:
-                return self._goto("APPROACH", cmd, "已退到检查位，重新感知")
+                self._hold += 1  # dwell: stop, keep looking
+                if self._hold >= RECOVER_DWELL_TICKS:
+                    return self._goto("APPROACH", cmd, "已退到检查位并停留观察，重新感知")
             return cmd
 
         if self.phase == "APPROACH":

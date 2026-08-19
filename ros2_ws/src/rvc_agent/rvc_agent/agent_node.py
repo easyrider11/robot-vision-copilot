@@ -9,7 +9,8 @@ file is deliberately just plumbing:
     /model/gripper/odometry        in   nav_msgs/Odometry    proprioception (z)
     /gripper/attached_state        in   std_msgs/String      DetachableJoint state
     /rvc/task                      in   std_msgs/String      restart the task
-    /rvc/state                     out  std_msgs/String      phase, on transitions
+    /rvc/state                     out  std_msgs/String      AgentState, on transitions
+    /rvc/phase                     out  std_msgs/String      sequencer phase (fault injector hooks here)
     /rvc/overlay                   out  sensor_msgs/Image    annotated frame
     /model/gripper/cmd_vel         out  geometry_msgs/Twist  gripper velocity
     /gripper/attach, /gripper/detach out std_msgs/Empty      suction grasp
@@ -31,6 +32,7 @@ try:
     from geometry_msgs.msg import Twist
     from nav_msgs.msg import Odometry
     from rclpy.node import Node
+    from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
     from sensor_msgs.msg import Image
     from std_msgs.msg import Empty, String
 except ImportError as exc:  # pragma: no cover - only importable inside ROS 2
@@ -102,6 +104,11 @@ class AgentNode(Node):
         self.create_subscription(String, "/rvc/task", self._on_task, 5)
 
         self.pub_state = self.create_publisher(String, "/rvc/state", 10)
+        # Latched (transient-local) so a late subscriber - e.g. the fault
+        # injector started after launch - still learns the current phase.
+        latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL,
+                             reliability=ReliabilityPolicy.RELIABLE)
+        self.pub_phase = self.create_publisher(String, "/rvc/phase", latched)
         self.pub_overlay = self.create_publisher(Image, "/rvc/overlay", 5)
         self.pub_cmd_vel = self.create_publisher(Twist, "/model/gripper/cmd_vel", 10)
         self.pub_attach = self.create_publisher(Empty, "/gripper/attach", 10)
@@ -171,6 +178,7 @@ class AgentNode(Node):
         if cmd.phase != self._last_phase:
             self._last_phase = cmd.phase
             self.get_logger().info(f"phase {cmd.phase}  {cmd.note}")
+            self.pub_phase.publish(String(data=cmd.phase))
             new_state = PHASE_STATE.get(cmd.phase, AgentState.EXECUTE)
             if new_state is not self.state:
                 self.state = new_state
