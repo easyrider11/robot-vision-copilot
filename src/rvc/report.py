@@ -170,7 +170,7 @@ class Reporter:
             f"  {GRN('动作 act')}    : "
             + "  ".join(f"{n}{v:+.2f}" for n, v in zip("xyz", act.vector[:3], strict=True))
             + f"  rpy[{','.join(f'{v:+.2f}' for v in act.vector[3:6])}]"
-            + f"  grip={'CLOSE' if act.gripper > 0.5 else 'OPEN '}"
+            + f"  grip={'CLOSE' if act.gripper < 0.5 else 'OPEN '}"
             + DIM(f"   ← {pend.get('note') or 'no clamp'} · {pend['latency_ms']:.1f}ms")
         )
         res = (

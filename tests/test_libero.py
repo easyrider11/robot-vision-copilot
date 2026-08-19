@@ -109,7 +109,8 @@ def test_mock_policy_refuses_to_drive_libero(env):
     obs = env.reset()
     pol = ScriptedMockPolicy()
     assert not pol.can_drive(obs)
-    assert np.all(pol.predict(obs).vector == 0.0)
+    a = pol.predict(obs)
+    assert np.all(a.vector[:6] == 0.0) and a.gripper == 1.0  # hold still, gripper open
 
     notes = check("mock", "libero")
     assert any(n.level == "error" for n in notes), "this pairing must be flagged"

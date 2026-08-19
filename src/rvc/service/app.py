@@ -193,7 +193,7 @@ def infer(body: InferIn) -> InferOut:
             delta_xyz=[round(float(v), 5) for v in action.delta_xyz],
             delta_rpy=[round(float(v), 5) for v in action.delta_rpy],
             gripper=action.gripper,
-            gripper_label="CLOSE" if action.gripper > 0.5 else "OPEN",
+            gripper_label="CLOSE" if action.gripper < 0.5 else "OPEN",
         ),
         validation=ValidationOut(
             ok=ok, note=note, clamped=bool(note) and ok, raw_vector=raw_action.to_list()

@@ -59,6 +59,13 @@ class ActionValidator:
         self._prev = None
         self._grip_history.clear()
 
+    def _last_gripper(self, steps_back: int = 1) -> float:
+        """Gripper value to hold on rejection: the last ACCEPTED command, so a
+        rejected action never opens or closes the gripper by accident. Defaults
+        to OPEN before any history exists."""
+        hist = self._grip_history
+        return float(hist[-steps_back]) if len(hist) >= steps_back else 1.0
+
     def validate(
         self, action: Action, ee_xyz: np.ndarray | None = None, step_scale: float = 0.035
     ) -> tuple[Action, bool, str]:
@@ -68,7 +75,7 @@ class ActionValidator:
         # 1. Non-finite values are never recoverable - reject.
         if not np.all(np.isfinite(v)):
             self.rejections += 1
-            return Action.zeros(), False, "REJECT: action contains NaN/Inf"
+            return Action.hold(self._last_gripper()), False, "REJECT: action contains NaN/Inf"
 
         # 2. Per-dimension magnitude.
         over = np.abs(v[:6]) > self.limits.max_delta
@@ -98,7 +105,11 @@ class ActionValidator:
         flips = sum(1 for a, b in itertools.pairwise(w) if a != b)
         if flips >= self.limits.gripper_chatter_max_flips:
             self.rejections += 1
-            return Action.zeros(), False, f"REJECT: gripper chattering ({flips} flips in {len(w)})"
+            return (
+                Action.hold(self._last_gripper(steps_back=2)),
+                False,
+                f"REJECT: gripper chattering ({flips} flips in {len(w)})",
+            )
 
         # 6. Predicted pose must stay inside the workspace box - but only if
         #    this env actually declared one. Skipping is safer than guessing:

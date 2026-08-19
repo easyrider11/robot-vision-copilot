@@ -76,7 +76,7 @@ class ScriptedMockPolicy:
             # which has no notion of "the block" or "the box". Returning zeros
             # is the honest answer; `rvc.compat` warns about this pairing up
             # front so a 0% success rate is never mistaken for a model result.
-            return Action.zeros()
+            return Action.hold(Gripper.OPEN)
 
         ee = np.asarray(p["ee"], dtype=np.float32)
         block = np.asarray(p["block"], dtype=np.float32)[:2]
