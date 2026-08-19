@@ -113,7 +113,7 @@ class VisualServoPolicy:
             # Missing either endpoint of the error vector -> the only safe
             # command is "hold still". The agent's PERCEIVE state is what
             # decides whether this is a TARGET_LOST failure.
-            return Action.zeros()
+            return Action.hold(Gripper.OPEN)
 
         eu = target.center_px[0] - marker.center_px[0]
         ev = target.center_px[1] - marker.center_px[1]
@@ -121,7 +121,7 @@ class VisualServoPolicy:
 
         if abs(eu) < self.deadband_px and abs(ev) < self.deadband_px:
             self.status.settled = True
-            return Action.zeros()
+            return Action.hold(Gripper.OPEN)
 
         # normalize to [-1, 1] and apply the camera-to-robot axis map
         nu = eu / (self.image_size / 2)

@@ -30,17 +30,22 @@ def _policy(**kw) -> VisualServoPolicy:
 # --- control law -------------------------------------------------------------
 
 
+def _still(a) -> bool:
+    """Zero motion; gripper dim is OPEN (1.0) under the contract, not zero."""
+    return bool(np.all(a.vector[:6] == 0) and a.gripper == 1.0)
+
+
 def test_missing_target_or_marker_means_hold_still():
     p = _policy()
-    assert np.all(p.compute(None, _det("gripper_marker", 128, 128)).vector == 0)
-    assert np.all(p.compute(_det("red_block", 40, 40), None).vector == 0)
+    assert _still(p.compute(None, _det("gripper_marker", 128, 128)))
+    assert _still(p.compute(_det("red_block", 40, 40), None))
     assert not p.status.settled
 
 
 def test_inside_deadband_is_settled_and_still():
     p = _policy(deadband_px=4.0)
     a = p.compute(_det("red_block", 130, 129), _det("gripper_marker", 128, 128))
-    assert np.all(a.vector == 0) and p.status.settled
+    assert _still(a) and p.status.settled
 
 
 def test_error_direction_follows_axis_map():
@@ -59,7 +64,7 @@ def test_output_is_clipped_and_z_rpy_untouched():
     p = _policy(kp=100.0)  # absurd gain must still clip
     a = p.compute(_det("red_block", 255, 0), _det("gripper_marker", 0, 255))
     assert np.all(np.abs(a.vector[:2]) <= 1.0)
-    assert np.all(a.vector[2:6] == 0.0) and a.vector[6] == 0.0
+    assert np.all(a.vector[2:6] == 0.0) and a.vector[6] == 1.0  # 1 = open
 
 
 def test_settles_as_error_shrinks():
@@ -101,7 +106,7 @@ def test_predict_holds_still_when_marker_absent():
     p = _policy()
     img = _frame_with({"red_block": (200, 128)})
     a = p.predict(Observation(image=img, instruction="x"))
-    assert np.all(a.vector == 0) and not p.status.marker_found
+    assert _still(a) and not p.status.marker_found
 
 
 def test_visual_servo_is_flagged_degraded():

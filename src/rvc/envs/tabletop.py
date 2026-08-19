@@ -156,7 +156,7 @@ class TabletopSim:
         self.ee[2] = float(np.clip(self.ee[2], Z_MIN, Z_MAX))
 
         # 2. gripper transitions
-        want_closed = action.gripper > 0.5
+        want_closed = action.gripper < 0.5  # contract: 1 = open, 0 = closed
         if want_closed and not self.grip_closed:
             info["event"] = self._close_gripper()
         elif not want_closed and self.grip_closed:

@@ -28,16 +28,26 @@ import numpy as np
 # OpenVLA (and LIBERO / RLDS-style manipulation datasets) use a 7-DoF action:
 #   [dx, dy, dz, droll, dpitch, dyaw, gripper]
 # The first six are normalized end-effector deltas in [-1, 1]; the last is the
-# gripper command. OpenVLA emits gripper in [0, 1] (0 = open, 1 = closed) for
-# most datasets, while LIBERO's underlying OSC controller wants [-1, 1] with
-# -1 = open. `rvc.envs` owns that conversion so policies never have to care.
+# gripper command. OpenVLA's RLDS dataloader standardises the gripper to [0, 1]
+# with **1 = open, 0 = closed** (see openvla `run_libero_eval.py`: "the
+# dataloader flips the sign ... (0 = close, 1 = open)"). LIBERO's OSC
+# controller instead wants [-1, +1] with -1 = open, +1 = closed. `rvc.envs`
+# owns that conversion so policies never have to care.
+#
+# HISTORY: this contract originally said "0 = open, 1 = closed" - backwards.
+# The tabletop sim, mock policy and visual servo were self-consistent with the
+# wrong sign while `LiberoEnv._to_libero` was consistent with the right one,
+# so a real OpenVLA output would have been inverted on the tabletop sim. Found
+# 2026-08-19 while writing the LIBERO behaviour-cloning baseline, whose hdf5
+# actions forced the convention to be written down precisely. The single
+# source of truth is now the `Gripper` enum + `tests/test_contract.py`.
 ACTION_DIM = 7
 ACTION_LABELS = ("dx", "dy", "dz", "droll", "dpitch", "dyaw", "gripper")
 
 
 class Gripper(float, Enum):
-    OPEN = 0.0
-    CLOSED = 1.0
+    OPEN = 1.0  # OpenVLA / RLDS convention
+    CLOSED = 0.0
 
 
 @dataclass(slots=True)
@@ -65,7 +75,17 @@ class Action:
 
     @classmethod
     def zeros(cls) -> Action:
+        """All-zero vector. NOTE: under the contract gripper=0 means CLOSED, so
+        this is not a neutral no-op - use `hold()` when you want "stop moving,
+        keep the gripper as it is"."""
         return cls(np.zeros(ACTION_DIM, dtype=np.float32))
+
+    @classmethod
+    def hold(cls, gripper: float = 1.0) -> Action:
+        """Zero motion with an explicit gripper command (default OPEN = 1.0)."""
+        v = np.zeros(ACTION_DIM, dtype=np.float32)
+        v[6] = float(gripper)
+        return cls(v)
 
     def to_list(self) -> list[float]:
         return [round(float(v), 5) for v in self.vector]
