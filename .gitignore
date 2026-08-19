@@ -33,3 +33,6 @@ ros2_ws/log/
 
 # personal interview-prep notes: kept local on purpose (not part of the public repo)
 docs/07-interview-prep.md
+
+# trained weights (regenerate with `make yolo` / `make bc-train`); keep the .json reports
+models/*.pt

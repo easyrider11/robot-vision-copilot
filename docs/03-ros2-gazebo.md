@@ -166,14 +166,39 @@ ros2_ws/
   <30px），远处出现红方块 = 留在原地 = 抓取失败。
 - **最终验收是纯像素判定**：红方块中心距蓝垫中心 <18px 才算 DONE。
 
+## 真实故障注入（2026-08-19 实跑）
+
+tabletop 仿真一直有故障注入，Gazebo 侧此前没有 —— RECOVER 分支在 Gazebo 里只被
+"意外的 bug"触发过。现在补上了 [`fault_inject.py`](../ros2_ws/src/rvc_agent/rvc_agent/fault_inject.py)：
+它订阅 agent 节点新增的 `/rvc/phase`（latched QoS，晚启动也能拿到当前相位），在指定相位
+对**仿真器本身**动手 —— 不是在 agent 代码里翻一个标志位。
+
+| 注入 | 机制 | 结果 |
+|---|---|---|
+| `suction_loss`（TRANSPORT +1.0 s） | 外部发一次 `/gripper/detach`，DetachableJoint 真的松开、方块掉到桌上 | **40 ms** 内由关节反馈判定 `grasp_failed` → RECOVER → 退开 → 重新接近 → 再抓 → DONE（偏差 8 px），1 次恢复 |
+| `occlude`（APPROACH +0.3 s，持续 4 s） | 通过 `gz service /world/tabletop/create` 在相机与方块之间生成一块无碰撞的深色面板，到时移除 | 11 帧检测不到方块 → `target_lost` → RECOVER（退开、**停留观察 1 s**）→ 面板消失后重新接近 → DONE（偏差 10 px），2 次恢复 |
+
+两段回放：`docs/assets/gazebo-fault-suction-loss.gif`、`docs/assets/gazebo-fault-occlusion.gif`。
+
+**注入暴露的设计问题**：第一次 3 秒遮挡就耗尽了全部 3 次恢复预算 —— 恢复循环
+（退开→再看→又丢）在 10 Hz 下 0.4 s 一圈，预算按次数计、实际只覆盖约 1 秒。修法是在
+RECOVER 到位后**停留 10 拍再看**（`RECOVER_DWELL_TICKS`），让每次尝试覆盖真实时间；
+之后 4 秒遮挡只用 2 次。两个小坑：phase 话题最初不是 latched，注入器晚启动 2 s 就
+错过了相位；SDF 塞进 protobuf 文本格式必须去掉换行、转义引号。
+
+复现（容器内）：
+```bash
+python3 /ws/src/rvc_agent/rvc_agent/fault_inject.py --fault suction_loss --at-phase TRANSPORT &
+ros2 launch rvc_agent tabletop.launch.py
+```
+
 ## 还没做的（按建议顺序）
 
 1. **机械臂** —— Panda 或 UR5e 的 URDF/SDF，配 `ros2_control` + MoveIt Servo。
    `agent_node` 已经在发 `TwistStamped`，正好对接 MoveIt Servo。
 4. **YOLO 替换颜色检测** —— [`YoloDetector`](../src/rvc/perception/detector.py) 已写好且接口一致，
    镜像里 `pip install ultralytics` 后把 `ColorDetector()` 换掉即可（会 +2 GB 镜像体积）。
-5. **失败注入** —— Gazebo 里可以真的做：给方块加随机扰动力模拟滑落，
-   在相机前生成一个临时遮挡物体模拟目标丢失。
+5. ~~失败注入~~ —— 已做（见上节）。可再加：随机扰动力、放置后碰翻方块让 VERIFY 失败。
 
 ## macOS 上的坑
 

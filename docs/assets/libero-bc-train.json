@@ -1,0 +1,243 @@
+{
+  "kind": "bc-libero",
+  "hdf5": "/Users/PC/code/robot-vision-copilot/external/libero-datasets/libero_spatial/pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate_demo.hdf5",
+  "config": {
+    "epochs": 30,
+    "batch_size": 64,
+    "lr": 0.0003,
+    "weight_decay": 0.0001,
+    "shift_pad": 6,
+    "val_demos": 5,
+    "pretrained": true,
+    "seed": 0
+  },
+  "proprio_mean": [
+    -0.021262839436531067,
+    0.1322309970855713,
+    1.0233652591705322,
+    0.021730873733758926,
+    -0.02228412590920925
+  ],
+  "proprio_std": [
+    0.07765617966651917,
+    0.04570271819829941,
+    0.08853704482316971,
+    0.01687469147145748,
+    0.016481300815939903
+  ],
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.1152,
+      "val_loss": 0.0962,
+      "val_gripper_acc": 0.9495,
+      "elapsed_s": 35.9
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.0733,
+      "val_loss": 0.0959,
+      "val_gripper_acc": 0.9341,
+      "elapsed_s": 66.8
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.0715,
+      "val_loss": 0.0867,
+      "val_gripper_acc": 0.9516,
+      "elapsed_s": 99.3
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.0584,
+      "val_loss": 0.0791,
+      "val_gripper_acc": 0.9626,
+      "elapsed_s": 143.6
+    },
+    {
+      "epoch": 5,
+      "train_loss": 0.0543,
+      "val_loss": 0.0737,
+      "val_gripper_acc": 0.9538,
+      "elapsed_s": 188.5
+    },
+    {
+      "epoch": 6,
+      "train_loss": 0.0524,
+      "val_loss": 0.0798,
+      "val_gripper_acc": 0.9626,
+      "elapsed_s": 226.8
+    },
+    {
+      "epoch": 7,
+      "train_loss": 0.0499,
+      "val_loss": 0.0749,
+      "val_gripper_acc": 0.9648,
+      "elapsed_s": 268.1
+    },
+    {
+      "epoch": 8,
+      "train_loss": 0.0459,
+      "val_loss": 0.0717,
+      "val_gripper_acc": 0.9516,
+      "elapsed_s": 310.2
+    },
+    {
+      "epoch": 9,
+      "train_loss": 0.0391,
+      "val_loss": 0.0858,
+      "val_gripper_acc": 0.9495,
+      "elapsed_s": 354.7
+    },
+    {
+      "epoch": 10,
+      "train_loss": 0.0388,
+      "val_loss": 0.0812,
+      "val_gripper_acc": 0.9516,
+      "elapsed_s": 398.6
+    },
+    {
+      "epoch": 11,
+      "train_loss": 0.0345,
+      "val_loss": 0.0706,
+      "val_gripper_acc": 0.9692,
+      "elapsed_s": 443.0
+    },
+    {
+      "epoch": 12,
+      "train_loss": 0.0371,
+      "val_loss": 0.0935,
+      "val_gripper_acc": 0.9473,
+      "elapsed_s": 487.4
+    },
+    {
+      "epoch": 13,
+      "train_loss": 0.0339,
+      "val_loss": 0.0784,
+      "val_gripper_acc": 0.9538,
+      "elapsed_s": 531.0
+    },
+    {
+      "epoch": 14,
+      "train_loss": 0.0299,
+      "val_loss": 0.0764,
+      "val_gripper_acc": 0.9604,
+      "elapsed_s": 573.6
+    },
+    {
+      "epoch": 15,
+      "train_loss": 0.026,
+      "val_loss": 0.0655,
+      "val_gripper_acc": 0.9758,
+      "elapsed_s": 615.4
+    },
+    {
+      "epoch": 16,
+      "train_loss": 0.0259,
+      "val_loss": 0.0814,
+      "val_gripper_acc": 0.9692,
+      "elapsed_s": 656.6
+    },
+    {
+      "epoch": 17,
+      "train_loss": 0.0254,
+      "val_loss": 0.0869,
+      "val_gripper_acc": 0.9604,
+      "elapsed_s": 698.3
+    },
+    {
+      "epoch": 18,
+      "train_loss": 0.0213,
+      "val_loss": 0.072,
+      "val_gripper_acc": 0.967,
+      "elapsed_s": 739.6
+    },
+    {
+      "epoch": 19,
+      "train_loss": 0.021,
+      "val_loss": 0.1087,
+      "val_gripper_acc": 0.9473,
+      "elapsed_s": 777.3
+    },
+    {
+      "epoch": 20,
+      "train_loss": 0.0206,
+      "val_loss": 0.079,
+      "val_gripper_acc": 0.9714,
+      "elapsed_s": 811.2
+    },
+    {
+      "epoch": 21,
+      "train_loss": 0.0158,
+      "val_loss": 0.0849,
+      "val_gripper_acc": 0.9604,
+      "elapsed_s": 845.5
+    },
+    {
+      "epoch": 22,
+      "train_loss": 0.0155,
+      "val_loss": 0.0676,
+      "val_gripper_acc": 0.9714,
+      "elapsed_s": 879.9
+    },
+    {
+      "epoch": 23,
+      "train_loss": 0.0147,
+      "val_loss": 0.0737,
+      "val_gripper_acc": 0.9714,
+      "elapsed_s": 914.6
+    },
+    {
+      "epoch": 24,
+      "train_loss": 0.0129,
+      "val_loss": 0.0816,
+      "val_gripper_acc": 0.9648,
+      "elapsed_s": 948.4
+    },
+    {
+      "epoch": 25,
+      "train_loss": 0.0129,
+      "val_loss": 0.0811,
+      "val_gripper_acc": 0.978,
+      "elapsed_s": 983.3
+    },
+    {
+      "epoch": 26,
+      "train_loss": 0.0107,
+      "val_loss": 0.0827,
+      "val_gripper_acc": 0.9736,
+      "elapsed_s": 1017.6
+    },
+    {
+      "epoch": 27,
+      "train_loss": 0.0101,
+      "val_loss": 0.0811,
+      "val_gripper_acc": 0.9736,
+      "elapsed_s": 1052.1
+    },
+    {
+      "epoch": 28,
+      "train_loss": 0.0106,
+      "val_loss": 0.0821,
+      "val_gripper_acc": 0.9736,
+      "elapsed_s": 1086.9
+    },
+    {
+      "epoch": 29,
+      "train_loss": 0.009,
+      "val_loss": 0.0811,
+      "val_gripper_acc": 0.9714,
+      "elapsed_s": 1121.7
+    },
+    {
+      "epoch": 30,
+      "train_loss": 0.0103,
+      "val_loss": 0.0846,
+      "val_gripper_acc": 0.978,
+      "elapsed_s": 1156.8
+    }
+  ],
+  "train_time_s": 1156.8,
+  "device": "mps",
+  "provenance": "Behaviour cloning on LIBERO human demos - a learned policy, NOT a VLA. No language conditioning; single task."
+}
