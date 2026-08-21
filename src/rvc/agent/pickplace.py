@@ -66,7 +66,10 @@ KZ = 20.0  # z P-gain (normalized action per metre of error)
 MISS_LIMIT = 3  # consecutive frames target may be missing before it is "lost"
 HOLD_TICKS = 3  # dwell after attach/detach commands
 CONFIRM_TIMEOUT = 20  # ticks (2 s) to wait for joint-state confirmation
-LEFT_BEHIND_PX = 30.0  # visible target farther than this from the marker => not carried
+LEFT_BEHIND_PX = 50.0  # visible target farther than this from the marker => not carried
+# (was 30 - the Panda carries the block at the grasp offset, up to ~19 px of
+# arrival error plus perspective, and a genuinely left-behind block recedes
+# well past 50 px within a second of transport anyway)
 TRANSPORT_SETTLE = 4  # consecutive in-tolerance ticks to call transport done
 # Dwell at the recovery pose before re-approaching. Without it a transient
 # occlusion burns the whole recovery budget in ~1 s (retreat -> look -> lost
@@ -115,6 +118,18 @@ def _fake_det(u: float, v: float, label: str = "goal") -> Detection:
 class PickPlaceSequencer:
     servo: VisualServoPolicy
     max_recoveries: int = 3
+    # z targets are WORLD heights of whatever the env's z-feedback measures.
+    # Floating gripper: its own centre (defaults below). Panda: panda_link8,
+    # which sits ~0.107 m above the suction face, so the launch file passes
+    # arm-specific values instead. Same sequencer, different geometry.
+    z_travel: float = Z_TRAVEL
+    z_grasp: float = Z_GRASP
+    z_place: float = Z_PLACE
+    home_px: tuple[float, float] = HOME_PX  # retreat corner; embodiment-specific
+    # z acceptance window. Must exceed the per-decision-step travel
+    # (max_speed / control_hz), else a saturated approach bang-bangs through
+    # it forever - observed live on the Panda at 0.15 m/s vs a ±8 mm window.
+    z_tol: float = Z_TOL
 
     phase: str = "INIT"
     recoveries: int = 0
@@ -123,6 +138,7 @@ class PickPlaceSequencer:
     _hold: int = 0
     _settle: int = 0
     _verify_wait: int = 0
+    _pad_err: float = float("inf")
 
     # -- helpers --------------------------------------------------------------
 
@@ -130,7 +146,7 @@ class PickPlaceSequencer:
         if z is None:
             return 0.0, False  # no odometry yet - do not guess
         err = z_target - z
-        if abs(err) < Z_TOL:
+        if abs(err) < self.z_tol:
             return 0.0, True
         return float(np.clip(err * KZ, -1.0, 1.0)), False
 
@@ -146,6 +162,7 @@ class PickPlaceSequencer:
         self._hold = 0
         self._settle = 0
         self._verify_wait = 0
+        self._pad_err = float("inf")
         return cmd
 
     def _recover(self, cmd: PickCommand, why: str) -> PickCommand:
@@ -173,7 +190,7 @@ class PickPlaceSequencer:
             # tick until the joint itself confirms - fire-and-forget lost the
             # message during transport discovery on the first live run.
             cmd.gripper_event = "detach"
-            cmd.vz, at_z = self._z_cmd(obs.z, Z_TRAVEL)
+            cmd.vz, at_z = self._z_cmd(obs.z, self.z_travel)
             self._hold += 1
             confirmed = obs.joint_state == "detached"
             if at_z and (confirmed or self._hold >= CONFIRM_TIMEOUT):
@@ -186,8 +203,8 @@ class PickPlaceSequencer:
             # grasp the gripper hovers exactly over the block, occluding it -
             # re-perceiving from the same pose can only report target_lost.
             # (Found via the NeverGrasp unit test, not in Gazebo.)
-            cmd.vz, at_z = self._z_cmd(obs.z, Z_TRAVEL)
-            cmd.vx, cmd.vy = self._xy_to(_fake_det(*HOME_PX), obs.marker)
+            cmd.vz, at_z = self._z_cmd(obs.z, self.z_travel)
+            cmd.vx, cmd.vy = self._xy_to(_fake_det(*self.home_px), obs.marker)
             eu, ev = self.servo.status.error_px
             clear = float(np.hypot(eu, ev)) < RETREAT_TOL_PX
             if at_z and clear:
@@ -197,7 +214,14 @@ class PickPlaceSequencer:
             return cmd
 
         if self.phase == "APPROACH":
-            cmd.vz, _ = self._z_cmd(obs.z, Z_TRAVEL)
+            cmd.vz, _ = self._z_cmd(obs.z, self.z_travel)
+            if obs.marker is None:
+                # No marker = no error vector = silent standstill. Found on the
+                # Panda: an occluded wrist disc parked APPROACH forever.
+                self._misses += 1
+                if self._misses >= MISS_LIMIT * 3:
+                    return self._recover(cmd, "marker_lost")
+                return cmd
             if obs.target is None:
                 if self.last_err_px < ARRIVE_PX:
                     return self._goto("DESCEND", cmd,
@@ -216,7 +240,7 @@ class PickPlaceSequencer:
             return cmd
 
         if self.phase == "DESCEND":
-            cmd.vz, at_z = self._z_cmd(obs.z, Z_GRASP)
+            cmd.vz, at_z = self._z_cmd(obs.z, self.z_grasp)
             if at_z:
                 cmd.gripper_event = "attach"
                 return self._goto("GRASP", cmd, "到抓取高度，闭合(吸附)")
@@ -237,13 +261,18 @@ class PickPlaceSequencer:
             # whether we grasped it or not - visibility carries zero
             # information at this pose. (The toy-sim tests caught this: an
             # earlier version checked here and waved a failed grasp through.)
-            cmd.vz, at_z = self._z_cmd(obs.z, Z_TRAVEL)
+            cmd.vz, at_z = self._z_cmd(obs.z, self.z_travel)
             if at_z:
                 return self._goto("TRANSPORT", cmd, "已抬升，移动中验证抓取")
             return cmd
 
         if self.phase == "TRANSPORT":
-            cmd.vz, _ = self._z_cmd(obs.z, Z_TRAVEL)
+            cmd.vz, _ = self._z_cmd(obs.z, self.z_travel)
+            if obs.marker is None:
+                self._misses += 1
+                if self._misses >= MISS_LIMIT * 3:
+                    return self._recover(cmd, "marker_lost")
+                return cmd
             # Grasp verification, two independent signals:
             #  1. the joint itself reports we lost it;
             #  2. the red block is visible FAR from the marker - sitting back
@@ -260,13 +289,26 @@ class PickPlaceSequencer:
                 if d > LEFT_BEHIND_PX:
                     return self._recover(cmd, f"grasp_failed (block left behind, {d:.0f}px away)")
             if obs.pad is None:
+                # Occlusion-is-arrival, transport edition: hovering over the
+                # pad, the carried block + hand can hide it completely. If the
+                # error was already small when it vanished, that IS arrival.
+                if self._pad_err < ARRIVE_PX:
+                    return self._goto("LOWER", cmd,
+                                      f"蓝垫被携带物遮挡即到达 (最后误差 {self._pad_err:.0f}px)")
                 self._misses += 1
                 if self._misses >= MISS_LIMIT:
                     return self._recover(cmd, "pad_lost")
                 return cmd
             self._misses = 0
-            cmd.vx, cmd.vy = self._xy_to(obs.pad, obs.marker)
+            # Terminal guidance: when the carried block itself is visible (it
+            # hangs at the grasp offset), steer THE BLOCK onto the pad rather
+            # than the wrist marker - this cancels the grasp offset and most
+            # of the marker-vs-pad parallax. Panda finding: marker-guided
+            # placement landed 22-55 px off; block-guided is what we grade on.
+            guide = obs.target if obs.target is not None else obs.marker
+            cmd.vx, cmd.vy = self._xy_to(obs.pad, guide)
             eu, ev = self.servo.status.error_px
+            self._pad_err = float(np.hypot(eu, ev))
             if float(np.hypot(eu, ev)) < TRANSPORT_TOL_PX:
                 self._settle += 1
                 if self._settle >= TRANSPORT_SETTLE:
@@ -276,7 +318,7 @@ class PickPlaceSequencer:
             return cmd
 
         if self.phase == "LOWER":
-            cmd.vz, at_z = self._z_cmd(obs.z, Z_PLACE)
+            cmd.vz, at_z = self._z_cmd(obs.z, self.z_place)
             if at_z:
                 cmd.gripper_event = "detach"
                 return self._goto("RELEASE", cmd, "到放置高度，松开")
@@ -293,8 +335,8 @@ class PickPlaceSequencer:
             return cmd
 
         if self.phase == "RETREAT":
-            cmd.vz, _ = self._z_cmd(obs.z, Z_TRAVEL)
-            home = _fake_det(*HOME_PX)
+            cmd.vz, _ = self._z_cmd(obs.z, self.z_travel)
+            home = _fake_det(*self.home_px)
             cmd.vx, cmd.vy = self._xy_to(home, obs.marker)
             eu, ev = self.servo.status.error_px
             if float(np.hypot(eu, ev)) < RETREAT_TOL_PX:

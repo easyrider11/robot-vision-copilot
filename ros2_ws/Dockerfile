@@ -12,6 +12,8 @@
 # Image budget matters on this host (~7 GB free disk): this stays headless -
 # no rviz2, no desktop metapackage, no ultralytics/torch. Expected unpacked
 # size ~2.5-3 GB. Add heavier tools only when you actually need them.
+# 2026-08-20: + ros2_control / gz_ros2_control / MoveIt Servo / Panda resources
+# for the real-arm stage (~+1 GB) - still headless, still no rviz.
 
 FROM ros:jazzy-ros-base
 
@@ -23,6 +25,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ros-jazzy-ros-gz-sim ros-jazzy-ros-gz-bridge \
       ros-jazzy-cv-bridge ros-jazzy-image-transport \
       ros-jazzy-rmw-cyclonedds-cpp \
+      ros-jazzy-ros2-controllers ros-jazzy-gz-ros2-control \
+      ros-jazzy-moveit-servo ros-jazzy-moveit-kinematics ros-jazzy-moveit-py \
+      ros-jazzy-moveit-resources-panda-moveit-config ros-jazzy-xacro \
       git \
     && rm -rf /var/lib/apt/lists/*
 

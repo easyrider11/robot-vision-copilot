@@ -16,6 +16,7 @@ from rvc.agent.pickplace import (
     PLACE_TOL_PX,
     Z_GRASP,
     Z_PLACE,
+    Z_TRAVEL,
     PickInput,
     PickPlaceSequencer,
 )
@@ -258,3 +259,38 @@ def test_transient_occlusion_does_not_exhaust_the_recovery_budget():
     finally:
         pp.RECOVER_DWELL_TICKS = saved
     assert cmd2.failed and "target_lost" in cmd2.failure
+
+
+def test_z_targets_are_configurable_for_other_embodiments():
+    """The Panda's z feedback is panda_link8 height, not gripper-centre height;
+    the sequencer must accept embodiment-specific z targets."""
+    seq = _seq()
+    assert (seq.z_travel, seq.z_grasp, seq.z_place) == (Z_TRAVEL, Z_GRASP, Z_PLACE)
+    arm = PickPlaceSequencer(
+        servo=VisualServoPolicy(ColorDetector()),
+        z_travel=1.05, z_grasp=0.93, z_place=0.94,
+    )
+    arm.phase = "DESCEND"
+    cmd = arm.step(PickInput(target=None, pad=None, marker=None, z=1.05, joint_state="detached"))
+    assert cmd.vz < 0, "must descend toward the arm-specific grasp height"
+    cmd = arm.step(PickInput(target=None, pad=None, marker=None, z=0.93, joint_state="detached"))
+    assert cmd.gripper_event == "attach", "arm grasp height reached -> attach"
+
+
+def test_pad_occluded_by_carried_block_is_arrival():
+    """Panda finding: hovering over the pad, the carried block + hand can hide
+    the pad entirely. Small-error-then-vanish must mean arrival, not pad_lost."""
+    class PadHider(ToySim):
+        def observe(self):
+            obs = super().observe()
+            if self.attached and obs.pad is not None:
+                d = float(np.hypot(self.marker[0] - PAD_PX[0], self.marker[1] - PAD_PX[1]))
+                if d < 20:  # close to pad -> carried block hides it
+                    obs.pad = None
+            return obs
+
+    sim, seq = PadHider(), _seq()
+    cmd, phases = _run(sim, seq)
+    assert cmd.done, f"failure={cmd.failure} phases={phases}"
+    assert seq.recoveries == 0
+    assert "LOWER" in phases

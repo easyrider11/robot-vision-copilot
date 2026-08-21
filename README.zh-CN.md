@@ -63,11 +63,12 @@ OpenVLA 这类视觉-语言-动作模型只回答一个问题：*给定这张相
 | 控制环时延（完整 PERCEIVE→VERIFY 一圈） | **p95 0.44 ms**，p99 0.90 ms | `make eval` |
 | Gazebo 抓取放置（像素 + 关节反馈） | INIT→…→VERIFY→**DONE，12.2 秒**，放置偏差 14 px | `make ros-up` |
 | Gazebo 视觉伺服到达 | SUCCEEDED，1.8 秒 | `make ros-up` |
+| **7-DOF Panda 机械臂** pick-and-place（resolved-rate 控制、moveit_py 雅可比、吸附+关节反馈） | APPROACH→…→**DONE，32.9 秒**，放置偏差 7px | `make ros-panda` |
 | Gazebo 真实故障注入（关节真松开 / 真生成遮挡模型） | 搬运中吸附失效 → 关节反馈 **40 ms** 判定 → 再抓 → DONE；4 秒遮挡 → 目标丢失 → 2 次恢复 → DONE | 容器内 `fault_inject.py` |
 | **LIBERO 行为克隆基线**（ResNet18×2+MLP，50 条示教，单任务，MPS 上 19 分钟训完 —— 学习策略，**不是 VLA**） | 50 个官方初始状态上成功率 **50 % (25/50)**，推理 7–15 ms/步 | `make bc-data bc-train bc-eval` |
 | LIBERO 在 Apple 芯片上的仿真 | 24 ms/step（双 256² 相机，`MUJOCO_GL=cgl`） | `make setup-libero` |
 | 学习型检测器（YOLO11n，合成数据，MPS） | 150 帧 held-out 合成测试集上 P 0.996 / R 0.996（颜色阈值：0.967 / 0.963）；~9 ms/帧；40 epochs ≈ 10 分钟 | `make yolo` |
-| 测试 | 72 个（依赖 LIBERO/YOLO/BC 的在缺依赖时自动跳过） | `make test` |
+| 测试 | 78 个（依赖 LIBERO/YOLO/BC 的在缺依赖时自动跳过） | `make test` |
 
 评测报告的 `provenance` 字段明确写着：测的是 **Agent 运行时**，不是任何 VLA。
 
@@ -113,6 +114,7 @@ make bc-data bc-train bc-eval         # LIBERO 行为克隆基线：示教 -> MP
 | 1.5 | 真实 LIBERO：安装（6 处兼容修复，各附症状）、适配器、`unnorm_key` 与夹爪符号约定 | ✅ | [05](docs/05-libero.md) |
 | 2 | FastAPI 可观察服务 + 自包含 Web 面板 | ✅ | [02](docs/02-service.md) |
 | 3 | 容器里的 ROS 2 Jazzy + Gazebo Harmonic：悬浮夹爪、视觉伺服、DetachableJoint 抓取、九阶段 pick-and-place | ✅ | [03](docs/03-ros2-gazebo.md) |
+| 3++ | **Franka Panda**：同一个序列器驱动真 7-DOF 臂（节点内 resolved-rate；MoveIt Servo 在记录在案的非确定性后退役） | ✅ | [09](docs/09-panda-moveit.md) |
 | 3+ | 学习型感知（YOLO11n 微调于自动标注合成数据）、可选 LLM 规划器 | ✅ | [06](docs/06-perception-yolo.md) |
 | 3++ | **VLA 之外的路径**：本机训练并评测的 LIBERO 行为克隆基线；Gazebo 真实故障注入；由此暴露的夹爪符号契约 bug | ✅ | [08](docs/08-bc-baseline.md) · [03](docs/03-ros2-gazebo.md) |
 | 4 | 真实 OpenVLA 推理 + LIBERO 评测、LoRA 微调 | 📄 已文档化，需要 GPU | [04](docs/04-real-openvla.md) |
@@ -142,7 +144,7 @@ src/rvc/
   service/                  app.py（FastAPI + 面板）· vla_server.py（GPU 侧推理服务）
   runners/                  audit · demo_libero · eval · play · bc（data/train/eval）
 ros2_ws/                    Dockerfile · compose · rvc_agent（SDF 世界、launch、agent_node、frame_grab、fault_inject）
-tests/                      72 个测试
+tests/                      78 个测试
 docs/                       阶段文档 00–08 + 资产
 scripts/                    setup_libero.sh · setup_ros2.sh · smoke_api.sh
 ```

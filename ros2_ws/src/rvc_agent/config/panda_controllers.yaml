@@ -1,0 +1,27 @@
+# ros2_control controllers for the Gazebo-simulated Panda.
+# gz_ros2_control reads this via the <parameters> tag injected in panda.launch.py.
+# The gz_ros2_control plugin node (named gz_ros_control, no "2") applies
+# position commands through a P controller with default gain 0.1 - far too
+# weak to hold the arm against gravity (measured 0.5-0.6 rad sag).
+gz_ros_control:
+  ros__parameters:
+    position_proportional_gain: 60.0  # gravity-free arm: gentle tracking, no sag to fight
+
+controller_manager:
+  ros__parameters:
+    update_rate: 100
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+    forward_position_controller:
+      type: position_controllers/JointGroupPositionController
+
+forward_position_controller:
+  ros__parameters:
+    joints:
+      - panda_joint1
+      - panda_joint2
+      - panda_joint3
+      - panda_joint4
+      - panda_joint5
+      - panda_joint6
+      - panda_joint7

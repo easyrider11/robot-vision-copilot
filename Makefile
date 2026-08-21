@@ -100,6 +100,11 @@ ros-build:                   ## Stage 3: 构建 ROS 2 + Gazebo 镜像（需要 D
 ros-shell:                   ## Stage 3: 进入 ROS 2 容器
 	@docker compose -f ros2_ws/docker-compose.yml run --rm ros2 bash
 
+.PHONY: ros-panda
+ros-panda:                   ## Stage 3+: Panda 机械臂 + MoveIt Servo 的 pick-and-place
+	@docker compose -f ros2_ws/docker-compose.yml run --rm ros2 \
+	  ros2 launch rvc_agent panda.launch.py
+
 # ---------------------------------------------------------------- dev ------
 .PHONY: test lint clean clean-runs help
 test: $(VENV)                ## 跑单元测试
