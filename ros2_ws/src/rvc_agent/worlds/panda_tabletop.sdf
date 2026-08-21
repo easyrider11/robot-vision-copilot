@@ -1,0 +1,128 @@
+<?xml version="1.0" ?>
+<!--
+  Panda-arm variant: same table/block/pad/camera as tabletop.sdf but NO
+  floating gripper - the arm is spawned separately from the URDF by
+  panda.launch.py (ros_gz_sim create), so ros2_control can bind to it.
+
+  Stage 3 minimal teaching world for Gazebo Harmonic (gz-sim 8).
+  STATUS: NOT RUN YET - authored on a machine without Docker/Gazebo.
+  Validate with:  gz sdf -check worlds/tabletop.sdf   (inside the container)
+
+  Design mirrors the Stage 1 TabletopSim on purpose:
+    - a table with a RED BLOCK (target) and a BLUE PAD (goal zone)
+    - an overhead camera publishing 256x256 RGB on /camera/image_raw
+    - a FLOATING GRIPPER: a kinematic block driven by velocity commands on
+      /model/gripper/cmd_vel. No arm, no IK, no MoveIt - deliberately. The
+      point of this stage is the ROS 2 plumbing and the agent loop, not
+      manipulator kinematics. The green top face makes the gripper visible
+      to the same ColorDetector that finds the red block, so the control
+      loop can be closed from PIXELS ALONE (no privileged state).
+
+  Object colors are chosen to satisfy rvc.perception.detector.ColorDetector:
+    red block   : r>130, r-g>55, r-b>55
+    blue pad    : b>90,  b-r>30, b-g>15
+    green marker: g>130, g-r>55, g-b>55
+-->
+<sdf version="1.10">
+  <world name="panda_tabletop">
+    <physics name="default" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <light type="directional" name="sun">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0 4 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.3 0.2 -0.9</direction>
+    </light>
+    <!-- Second fill light so thresholded colors stay saturated in shadow. -->
+    <light type="directional" name="fill">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0 4 0 0 0</pose>
+      <diffuse>0.4 0.4 0.4 1</diffuse>
+      <direction>0.4 -0.3 -0.8</direction>
+    </light>
+
+    <model name="ground">
+      <static>true</static>
+      <link name="link">
+        <collision name="c"><geometry><plane><normal>0 0 1</normal></plane></geometry></collision>
+        <visual name="v">
+          <geometry><plane><normal>0 0 1</normal><size>10 10</size></plane></geometry>
+          <material><ambient>0.35 0.35 0.38 1</ambient><diffuse>0.35 0.35 0.38 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Table: 1.0 x 1.0 m top at z = 0.75 -->
+    <model name="table">
+      <static>true</static>
+      <pose>0 0 0.7250 0 0 0</pose>
+      <link name="top">
+        <collision name="c"><geometry><box><size>1.0 1.0 0.05</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>1.0 1.0 0.05</size></box></geometry>
+          <material><ambient>0.72 0.62 0.47 1</ambient><diffuse>0.72 0.62 0.47 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Target: red block, 5 cm cube resting on the table -->
+    <model name="red_block">
+      <pose>-0.05 -0.18 0.775 0 0 0</pose>
+      <link name="link">
+        <inertial><mass>0.05</mass>
+          <inertia><ixx>2.1e-5</ixx><iyy>2.1e-5</iyy><izz>2.1e-5</izz>
+                   <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz></inertia>
+        </inertial>
+        <collision name="c"><geometry><box><size>0.05 0.05 0.05</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>0.05 0.05 0.05</size></box></geometry>
+          <material><ambient>0.85 0.10 0.08 1</ambient><diffuse>0.85 0.10 0.08 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Goal zone: blue pad, 12 x 12 cm, 1 cm thick -->
+    <model name="blue_pad">
+      <static>true</static>
+      <pose>0.08 0.14 0.755 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.12 0.12 0.01</size></box></geometry></collision>
+        <visual name="v">
+          <geometry><box><size>0.12 0.12 0.01</size></box></geometry>
+          <material><ambient>0.10 0.25 0.85 1</ambient><diffuse>0.10 0.25 0.85 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Overhead camera, 1.15 m above the table top, looking straight down.
+         Optical axis is +x in gz, so pitch by +90 deg. -->
+    <model name="overhead_camera">
+      <static>true</static>
+      <!-- 3.4 m: high enough that the arm body (links at z 1.0-1.3) magnifies
+           only ~1.15x vs the table plane instead of blotting out the scene -->
+      <pose>0 0 3.4 0 1.5708 1.5708</pose>
+      <link name="link">
+        <sensor name="camera" type="camera">
+          <topic>/camera/image_raw</topic>
+          <update_rate>15</update_rate>
+          <camera>
+            <horizontal_fov>0.9</horizontal_fov>
+            <image><width>512</width><height>512</height><format>R8G8B8</format></image>
+            <clip><near>0.05</near><far>10</far></clip>
+          </camera>
+        </sensor>
+      </link>
+    </model>
+  </world>
+</sdf>

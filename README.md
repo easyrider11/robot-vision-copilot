@@ -63,11 +63,12 @@ All numbers below are reproducible with a single `make` target and come from rea
 | Control-loop latency (full PERCEIVE→VERIFY cycle) | **p95 0.44 ms**, p99 0.90 ms | `make eval` |
 | Gazebo pick-and-place, from pixels + joint feedback | INIT→…→VERIFY→**DONE in 12.2 s**, placement error 14 px | `make ros-up` |
 | Gazebo visual servo to target | SUCCEEDED in 1.8 s | `make ros-up` |
+| **7-DOF Panda arm** pick-and-place (resolved-rate control, moveit_py jacobian, suction + joint feedback) | APPROACH→…→**DONE in 32.9 s**, placement error 7 px | `make ros-panda` |
 | Gazebo fault injection (real: joint released / occluder model spawned) | suction loss mid-transport → detected in **40 ms** from joint feedback → re-grasp → DONE; 4 s occlusion → target-lost → 2 recoveries → DONE | `fault_inject.py` in the container |
 | **LIBERO behaviour-cloning baseline** (ResNet18×2+MLP, 50 demos, one task, trained on MPS in 19 min — a learned policy, **not a VLA**) | **50 % (25/50)** success over 50 official init states, 7–15 ms/step inference | `make bc-data bc-train bc-eval` |
 | LIBERO simulation on Apple silicon | 24 ms/step (two 256² cameras, `MUJOCO_GL=cgl`) | `make setup-libero` |
 | Learned detector (YOLO11n, synthetic data, MPS) | P 0.996 / R 0.996 on 150 held-out synthetic frames (colour thresholds: 0.967 / 0.963); ~9 ms per frame; 40 epochs ≈ 10 min | `make yolo` |
-| Test suite | 72 tests (LIBERO/YOLO/BC-dependent ones skip themselves without the deps) | `make test` |
+| Test suite | 78 tests (LIBERO/YOLO/BC-dependent ones skip themselves without the deps) | `make test` |
 
 The eval report's `provenance` field states explicitly that these measure the **agent runtime**, not any VLA.
 
@@ -113,6 +114,7 @@ The project was built in verifiable stages; each has a doc with what was measure
 | 1.5 | Real LIBERO: install (6 compat fixes, each with symptom), adapter, `unnorm_key` and gripper-sign conventions | ✅ | [05](docs/05-libero.md) |
 | 2 | FastAPI observability service + self-contained web panel | ✅ | [02](docs/02-service.md) |
 | 3 | ROS 2 Jazzy + Gazebo Harmonic in a container: floating gripper, visual servo, DetachableJoint grasp, nine-phase pick-and-place | ✅ | [03](docs/03-ros2-gazebo.md) |
+| 3++ | **Franka Panda**: the same sequencer driving a real 7-DOF arm via in-node resolved-rate control (MoveIt Servo retired after documented non-determinism) | ✅ | [09](docs/09-panda-moveit.md) |
 | 3+ | Learned perception (YOLO11n on auto-labelled synthetic data), optional LLM planner | ✅ | [06](docs/06-perception-yolo.md) |
 | 3++ | **Paths beyond the VLA**: LIBERO behaviour-cloning baseline trained and evaluated locally; real fault injection in Gazebo; the gripper-sign contract bug it exposed | ✅ | [08](docs/08-bc-baseline.md) · [03](docs/03-ros2-gazebo.md) |
 | 4 | Real OpenVLA inference + LIBERO evaluation, LoRA fine-tune | 📄 documented, needs a GPU | [04](docs/04-real-openvla.md) |
@@ -142,7 +144,7 @@ src/rvc/
   service/                  app.py (FastAPI + panel) · vla_server.py (GPU-side inference server)
   runners/                  audit · demo_libero · eval · play · bc (data/train/eval)
 ros2_ws/                    Dockerfile · compose · rvc_agent (SDF world, launch, agent_node, frame_grab, fault_inject)
-tests/                      72 tests
+tests/                      78 tests
 docs/                       stage docs 00–08 + assets
 scripts/                    setup_libero.sh · setup_ros2.sh · smoke_api.sh
 ```
