@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 
 from rvc.policies.base import Policy, PolicyUnavailable
 
-BACKENDS = ("auto", "openvla-local", "openvla-remote", "mock")
+BACKENDS = ("auto", "openvla-local", "openvla-remote", "smolvla-remote", "mock")
 
 
 @dataclass
@@ -44,6 +44,12 @@ def _try_remote(unnorm_key: str, url: str) -> Policy:
     return OpenVLARemotePolicy(url=url, unnorm_key=unnorm_key)
 
 
+def _try_smolvla(url: str) -> Policy:
+    from rvc.policies.smolvla_remote import SmolVLARemotePolicy
+
+    return SmolVLARemotePolicy(url=url)
+
+
 def resolve_policy(
     backend: str = "auto",
     *,
@@ -58,6 +64,7 @@ def resolve_policy(
         raise ValueError(f"unknown backend {backend!r}; choose from {BACKENDS}")
 
     remote_url = remote_url or os.environ.get("RVC_VLA_URL") or ""
+    smolvla_url = os.environ.get("RVC_SMOLVLA_URL") or ""
     attempts: list[tuple[str, str]] = []
 
     order: list[str]
@@ -67,6 +74,10 @@ def resolve_policy(
             order.append("openvla-remote")
         else:
             attempts.append(("openvla-remote", "no RVC_VLA_URL set - skipped"))
+        if smolvla_url:
+            order.append("smolvla-remote")
+        else:
+            attempts.append(("smolvla-remote", "no RVC_SMOLVLA_URL set - skipped"))
         order.append("mock")
     else:
         order = [backend]
@@ -81,6 +92,10 @@ def resolve_policy(
                         "openvla-remote requires --remote-url or RVC_VLA_URL"
                     )
                 pol = _try_remote(unnorm_key, remote_url)
+            elif name == "smolvla-remote":
+                from rvc.policies.smolvla_remote import DEFAULT_URL
+
+                pol = _try_smolvla(smolvla_url or DEFAULT_URL)
             elif name == "mock":
                 from rvc.policies.mock import ScriptedMockPolicy
 

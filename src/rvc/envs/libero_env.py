@@ -178,6 +178,8 @@ class LiberoEnv:
         wrist = raw.get("robot0_eye_in_hand_image")
         wrist = np.asarray(wrist)[::-1, ::-1].copy() if wrist is not None else None
         eef = np.asarray(raw.get("robot0_eef_pos", np.zeros(3)), dtype=np.float32)
+        eef_quat = np.asarray(
+            raw.get("robot0_eef_quat", [0.0, 0.0, 0.0, 1.0]), dtype=np.float32)
         gripper_q = np.asarray(raw.get("robot0_gripper_qpos", np.zeros(2)), dtype=np.float32)
         return Observation(
             image=agent.astype(np.uint8),
@@ -189,6 +191,7 @@ class LiberoEnv:
             # LIBERO's success signal is the reward, not privileged geometry.
             privileged={
                 "ee": eef.tolist(),
+                "ee_quat": eef_quat.tolist(),
                 "gripper_qpos": gripper_q.tolist(),
                 "success": bool(reward > 0),
             },

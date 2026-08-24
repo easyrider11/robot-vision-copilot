@@ -140,6 +140,12 @@ bc-eval: $(VENV)             ## BC 基线 3/3：在真实 LIBERO 上评测成功
 	@$(PY) -m rvc.runners.bc eval --suite $(SUITE) --task-index $(TASKIDX) --episodes $(or $(EPISODES),20)
 
 .PHONY: play
+smolvla-serve:               ## 本机起 SmolVLA-450M 推理服务（REAL VLA，.venv-lerobot，MPS）
+	.venv-lerobot/bin/python -m rvc.service.smolvla_server --port 8100
+
+smolvla-eval: $(VENV)        ## SmolVLA 在 LIBERO 官方初始状态上评测（先 make smolvla-serve）
+	$(PY) -m rvc.runners.bc eval --policy smolvla --episodes 50 --max-steps 280
+
 play: $(VENV)                ## 交互式 playground：自然语言指令 + 故障注入 + GIF 导出
 	@$(PY) -m rvc.runners.play
 

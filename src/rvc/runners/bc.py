@@ -73,20 +73,33 @@ def cmd_eval(args) -> int:
     from rvc.perception.detector import ColorDetector
     from rvc.policies.bc_libero import LiberoBCPolicy
 
-    policy = LiberoBCPolicy(args.checkpoint)
-    print(f"[eval] {policy.describe()}")
+    if args.policy == "smolvla":
+        from rvc.policies.smolvla_remote import SmolVLARemotePolicy
+
+        policy = SmolVLARemotePolicy(url=args.url)
+        resolution = 256  # SmolVLA's training resolution
+        print(f"[eval] {policy.describe()}")
+        print("       REAL VLA - first non-degraded model backend in this repo")
+    else:
+        policy = LiberoBCPolicy(args.checkpoint)
+        resolution = 128  # BC's training resolution
+        print(f"[eval] {policy.describe()}")
+        print(f"       device={policy.device}")
+        print("       DEGRADED: " + policy.degraded_reason)
     print(f"       suite={args.suite} task={args.task_index} episodes={args.episodes} "
-          f"max_steps={args.max_steps} device={policy.device}")
-    print("       DEGRADED: " + policy.degraded_reason)
+          f"max_steps={args.max_steps}")
 
     stamp = time.strftime("%Y%m%d-%H%M%S")
-    out = Path(args.out) / f"bc-eval-{stamp}"
+    out = Path(args.out) / f"{args.policy}-eval-{stamp}"
     out.mkdir(parents=True, exist_ok=True)
     episodes = []
     t0 = time.time()
     for i in range(args.episodes):
         env = LiberoEnv(task_suite=args.suite, task_index=args.task_index,
-                        init_state_index=i, resolution=128, max_steps=args.max_steps, seed=i)
+                        init_state_index=i, resolution=resolution,
+                        max_steps=args.max_steps, seed=i)
+        if hasattr(policy, "reset"):
+            policy.reset()  # SmolVLA holds a 50-step action-chunk queue per episode
         agent = RobotAgent(
             env=env, policy=policy, verifier=RewardVerifier(), detector=ColorDetector(),
             config=AgentConfig(max_recoveries=0, max_total_steps=args.max_steps,
@@ -110,12 +123,20 @@ def cmd_eval(args) -> int:
 
     n = len(episodes)
     succ = sum(e["success"] for e in episodes)
+    if args.policy == "smolvla":
+        prov_policy = policy.describe()
+        prov_extra = {"chunk_forwards": len(policy.chunk_latencies_ms),
+                      "chunk_ms_p50": round(float(np.median(policy.chunk_latencies_ms)), 1)
+                      if policy.chunk_latencies_ms else None}
+    else:
+        prov_policy = "bc-libero (ResNet18x2+MLP behaviour cloning, NOT a VLA, no language)"
+        prov_extra = {"checkpoint": policy.checkpoint,
+                      "checkpoint_meta": {k: v for k, v in policy.meta.items() if k != "history"}}
     report = {
         "provenance": {
-            "policy": "bc-libero (ResNet18x2+MLP behaviour cloning, NOT a VLA, no language)",
-            "checkpoint": policy.checkpoint,
-            "checkpoint_meta": {k: v for k, v in policy.meta.items() if k != "history"},
-            "env": f"LIBERO {args.suite} task {args.task_index}, 128x128, "
+            "policy": prov_policy,
+            **prov_extra,
+            "env": f"LIBERO {args.suite} task {args.task_index}, {resolution}x{resolution}, "
                    f"init states 0..{n - 1}, max_steps {args.max_steps}",
             "runtime": "RobotAgent e2e mode + ActionValidator (no recovery, no planner)",
         },
@@ -147,6 +168,8 @@ def main(argv: list[str] | None = None) -> int:
             s.add_argument("--scratch", action="store_true", help="no ImageNet init")
             s.add_argument("--seed", type=int, default=0)
         if name == "eval":
+            s.add_argument("--policy", default="bc", choices=("bc", "smolvla"))
+            s.add_argument("--url", default="http://127.0.0.1:8100")
             s.add_argument("--episodes", type=int, default=20)
             s.add_argument("--max-steps", type=int, default=220)
             s.add_argument("--save-gifs", type=int, default=2)
