@@ -120,6 +120,7 @@ make bc-data bc-train bc-eval         # LIBERO 行为克隆基线：示教 -> MP
 | 3+++ | **真 VLA 上本机**：SmolVLA-450M 后端，第一次 `degraded=False`；BC 50% vs SmolVLA 66% vs OpenVLA-7B 84.7%（文献） | ✅ | [10](docs/10-smolvla.md) |
 | 3++ | **VLA 之外的路径**：本机训练并评测的 LIBERO 行为克隆基线；Gazebo 真实故障注入；由此暴露的夹爪符号契约 bug | ✅ | [08](docs/08-bc-baseline.md) · [03](docs/03-ros2-gazebo.md) |
 | 4 | 真实 OpenVLA 推理 + LIBERO 评测、LoRA 微调 | 📄 已文档化，需要 GPU | [04](docs/04-real-openvla.md) |
+| ↗ | **衍生工具**：[lerobot-dataset-lint](https://github.com/easyrider11/lerobot-dataset-lint) —— 夹爪契约那一课变成了给 LeRobot 数据集社区的 linter（19 条规则，6 个真实数据集验证） | ✅ | - |
 
 ## 值得知道的设计决策
 

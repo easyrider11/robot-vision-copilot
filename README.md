@@ -120,6 +120,7 @@ The project was built in verifiable stages; each has a doc with what was measure
 | 3+++ | **A real VLA on this laptop**: SmolVLA-450M backend, `degraded=False` for the first time; BC 50% vs SmolVLA 66% vs OpenVLA-7B 84.7% (lit.) | ✅ | [10](docs/10-smolvla.md) |
 | 3++ | **Paths beyond the VLA**: LIBERO behaviour-cloning baseline trained and evaluated locally; real fault injection in Gazebo; the gripper-sign contract bug it exposed | ✅ | [08](docs/08-bc-baseline.md) · [03](docs/03-ros2-gazebo.md) |
 | 4 | Real OpenVLA inference + LIBERO evaluation, LoRA fine-tune | 📄 documented, needs a GPU | [04](docs/04-real-openvla.md) |
+| ↗ | **Spin-off**: [lerobot-dataset-lint](https://github.com/easyrider11/lerobot-dataset-lint) - the gripper-contract lesson turned into a community linter for LeRobot datasets (19 rules, validated on 6 hub datasets) | ✅ | - |
 
 ## Design decisions worth knowing
 
