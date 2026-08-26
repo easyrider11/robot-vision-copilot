@@ -115,7 +115,7 @@ make bc-data bc-train bc-eval         # LIBERO 行为克隆基线：示教 -> MP
 | 1.5 | 真实 LIBERO：安装（6 处兼容修复，各附症状）、适配器、`unnorm_key` 与夹爪符号约定 | ✅ | [05](docs/05-libero.md) |
 | 2 | FastAPI 可观察服务 + 自包含 Web 面板 | ✅ | [02](docs/02-service.md) |
 | 3 | 容器里的 ROS 2 Jazzy + Gazebo Harmonic：悬浮夹爪、视觉伺服、DetachableJoint 抓取、九阶段 pick-and-place | ✅ | [03](docs/03-ros2-gazebo.md) |
-| 3++ | **Franka Panda**：同一个序列器驱动真 7-DOF 臂（节点内 resolved-rate；MoveIt Servo 在记录在案的非确定性后退役） | ✅ | [09](docs/09-panda-moveit.md) |
+| 3++ | **Franka Panda**：同一个序列器驱动真 7-DOF 臂（节点内 resolved-rate；MoveIt Servo 因在我们自造动力学栈中行为不可预测而退役 —— 后续 stock 栈对照还了 servo 本身清白，见 09） | ✅ | [09](docs/09-panda-moveit.md) |
 | 3+ | 学习型感知（YOLO11n 微调于自动标注合成数据）、可选 LLM 规划器 | ✅ | [06](docs/06-perception-yolo.md) |
 | 3+++ | **真 VLA 上本机**：SmolVLA-450M 后端，第一次 `degraded=False`；BC 50% vs SmolVLA 66% vs OpenVLA-7B 84.7%（文献） | ✅ | [10](docs/10-smolvla.md) |
 | 3++ | **VLA 之外的路径**：本机训练并评测的 LIBERO 行为克隆基线；Gazebo 真实故障注入；由此暴露的夹爪符号契约 bug | ✅ | [08](docs/08-bc-baseline.md) · [03](docs/03-ros2-gazebo.md) |

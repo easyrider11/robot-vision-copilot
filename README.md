@@ -115,7 +115,7 @@ The project was built in verifiable stages; each has a doc with what was measure
 | 1.5 | Real LIBERO: install (6 compat fixes, each with symptom), adapter, `unnorm_key` and gripper-sign conventions | ✅ | [05](docs/05-libero.md) |
 | 2 | FastAPI observability service + self-contained web panel | ✅ | [02](docs/02-service.md) |
 | 3 | ROS 2 Jazzy + Gazebo Harmonic in a container: floating gripper, visual servo, DetachableJoint grasp, nine-phase pick-and-place | ✅ | [03](docs/03-ros2-gazebo.md) |
-| 3++ | **Franka Panda**: the same sequencer driving a real 7-DOF arm via in-node resolved-rate control (MoveIt Servo retired after documented non-determinism) | ✅ | [09](docs/09-panda-moveit.md) |
+| 3++ | **Franka Panda**: the same sequencer driving a real 7-DOF arm via in-node resolved-rate control (MoveIt Servo retired: erratic in OUR fabricated-dynamics stack - a stock-stack A/B later cleared servo itself; see 09) | ✅ | [09](docs/09-panda-moveit.md) |
 | 3+ | Learned perception (YOLO11n on auto-labelled synthetic data), optional LLM planner | ✅ | [06](docs/06-perception-yolo.md) |
 | 3+++ | **A real VLA on this laptop**: SmolVLA-450M backend, `degraded=False` for the first time; BC 50% vs SmolVLA 66% vs OpenVLA-7B 84.7% (lit.) | ✅ | [10](docs/10-smolvla.md) |
 | 3++ | **Paths beyond the VLA**: LIBERO behaviour-cloning baseline trained and evaluated locally; real fault injection in Gazebo; the gripper-sign contract bug it exposed | ✅ | [08](docs/08-bc-baseline.md) · [03](docs/03-ros2-gazebo.md) |

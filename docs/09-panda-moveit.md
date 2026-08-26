@@ -23,7 +23,7 @@ Gazebo Panda (moveit_resources URDF + 运行时手术)
 ## MoveIt Servo 为什么被退役
 
 原计划是 `TwistStamped → MoveIt Servo → 关节速度`。在这套容器（Jazzy 二进制 +
-自造动力学的规划 URDF）里，servo 表现出**不可复现的行为**，全部实测记录：
+自造动力学的规划 URDF）里，servo 表现出**在我们环境中不可复现的行为**，全部实测记录：
 
 | 实验 | 结果 |
 |---|---|
@@ -38,6 +38,18 @@ Gazebo Panda (moveit_resources URDF + 运行时手术)
 numpy 实现同样的数学（DLS resolved-rate）—— 每拍从实测关节状态重新求解，
 **没有任何开环积分**，行为完全确定。servo 的 15 条参数调试经验没有浪费：
 全部沉淀在下面的坑清单里。
+
+> **2026-08-26 更正：漂移是我们环境的产物，不是 servo 的 bug。**
+> 并行会话在 **stock 栈**上做了对照复现（`ros:jazzy` + moveit_servo 二进制
+> 2.12.4 + moveit_resources Panda + ros2_control FakeSystem，无 Gazebo、无物理）：
+> 基线、零 twist、零时戳 100 Hz、**冻结目标 POSE 模式**四个条件下 20 秒位移
+> 全部 0.000000 m；正控（目标 −0.05 m）1 秒内收敛并精确保持。servo 核心
+> 行为端正。未证实的机理假说：FakeSystem 把指令位置回显为量测（跟踪误差
+> 恒零），而我们的 gz_ros2_control 裸 P 位置接口让量测持续滞后于指令，
+> servo 对量测闭环 —— 滞后可积成单调"漂移"。
+> **退役决定不变，但理由修正**：不是"servo 坏了"，而是"servo 在我们这套
+> 自造动力学的栈里行为不可预测且无从调试；40 行白盒在同一环境里行为可
+> 解释、可单测"。区别很重要：前者是甩锅，后者是工程判断。
 
 ## 首跑修正全记录（14 个，每个都有实测证据）
 
