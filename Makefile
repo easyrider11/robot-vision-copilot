@@ -149,6 +149,19 @@ smolvla-eval: $(VENV)        ## SmolVLA 在 LIBERO 官方初始状态上评测�
 play: $(VENV)                ## 交互式 playground：自然语言指令 + 故障注入 + GIF 导出
 	@$(PY) -m rvc.runners.play
 
+.PHONY: cap-demo
+cap-demo: $(VENV)            ## Code as Policies：LLM 写策略代码驱动桌面（需 ANTHROPIC_API_KEY）
+	@$(PY) -m rvc.runners.cap
+
 .PHONY: yolo
 yolo: $(VENV)                ## 合成数据 -> 微调 yolo11n (MPS) -> 评测 -> models/yolo-tabletop.pt
 	@$(UV) pip install --python $(PY) -q -e ".[vision]" && $(PY) -m rvc.perception.yolo_train --epochs $(or $(EPOCHS),40)
+
+bc-lang-train: ## 语言条件多任务 BC：3 个 LIBERO spatial 任务联合训练（MPS ~1h）
+	$(PY) -m rvc.runners.bc train --task-index 0,1,2 --checkpoint models/bc-libero-spatial-lang.pt
+
+bc-lang-eval: ## 逐任务评测语言条件 BC（官方初始状态）
+	$(PY) -m rvc.runners.bc eval --task-index 0,1,2 --episodes 50 --checkpoint models/bc-libero-spatial-lang.pt
+
+bc-lang-ablation: ## 错误指令消融：所有任务都听 task-0 的指令
+	$(PY) -m rvc.runners.bc eval --task-index 1,2 --episodes 20 --wrong-instruction-from 0 --checkpoint models/bc-libero-spatial-lang.pt

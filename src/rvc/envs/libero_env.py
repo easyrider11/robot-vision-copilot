@@ -88,6 +88,7 @@ class LiberoEnv:
         resolution: int = 256,
         max_steps: int = 220,
         seed: int = 0,
+        instruction_override: str = "",
     ) -> None:
         ok, reason = probe()
         if not ok:
@@ -110,7 +111,9 @@ class LiberoEnv:
 
         task = suite.get_task(task_index)
         bddl = os.path.join(get_libero_path("bddl_files"), task.problem_folder, task.bddl_file)
-        self._instruction = task.language
+        # instruction_override exists for the wrong-instruction ablation: the
+        # SCENE stays this task's, but the policy hears a different sentence
+        self._instruction = instruction_override or task.language
         self.task_id = f"{task_suite}/{task_index}"
         self.max_steps = max_steps
         self.n_tasks = suite.n_tasks

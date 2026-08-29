@@ -5,13 +5,19 @@
 [中文版 README](README.zh-CN.md) · [Docs](docs/) · [Interactive playground](#try-it-in-60-seconds) · [What is real vs. degraded](#honesty-what-is-and-is-not-running-here)
 
 <p align="center">
-  <img src="docs/assets/gazebo-pickplace.gif" width="256" alt="Gazebo pick-and-place, overhead camera">
-  &nbsp;&nbsp;
-  <img src="docs/assets/tabletop-grasp-slip-recovery.gif" width="256" alt="Tabletop sim: grasp-slip injected, agent recovers">
-  &nbsp;&nbsp;
-  <img src="docs/assets/libero-bc-success.gif" width="128" alt="LIBERO: behaviour-cloned baseline rollout">
+  <img src="docs/assets/panda-pickplace.gif" width="240" alt="Franka Panda 7-DOF pick-and-place in Gazebo">
+  &nbsp;
+  <img src="docs/assets/smolvla-libero.gif" width="150" alt="SmolVLA-450M running locally on LIBERO">
+  &nbsp;
+  <img src="docs/assets/tabletop-grasp-slip-recovery.gif" width="240" alt="Tabletop sim: grasp-slip injected, agent recovers">
 </p>
-<p align="center"><sub>Left: Gazebo pick-and-place driven from pixels alone (suction grasp with joint-state feedback, pixel-verified placement, 12.2 s). Middle: tabletop sim with a mid-transport slip injected — the agent detects it, replans, and finishes. Right: LIBERO: the behaviour-cloned baseline (trained on this laptop) picks the bowl and places it on the plate.</sub></p>
+<p align="center"><sub>Left: a real 7-DOF Franka Panda, resolved-rate control on a moveit_py jacobian — 32.9 s, 7 px placement error. Middle: SmolVLA-450M, a real vision-language-action model, running locally on Apple silicon against the official LIBERO benchmark. Right: a mid-transport slip is injected; the agent detects it, replans, and finishes.</sub></p>
+
+|  | | |
+|---|---|---|
+| **66 %** SmolVLA-450M on LIBERO<br><sub>real VLA, local MPS · BC baseline 50 % · OpenVLA-7B lit. 84.7 %</sub> | **500 / 500** episodes, 100 % recovery<br><sub>375 with faults injected · 0 unsafe actions in 17,478 policy calls</sub> | **7 px** placement on a 7-DOF arm<br><sub>Franka Panda in Gazebo, 32.9 s, zero recoveries</sub> |
+
+<sub>Every number on this page comes from a committed run artifact and is reproducible with one `make` target. Where a component is a stand-in rather than the real thing, it is stamped `degraded=true` with a reason — see [Honesty](#honesty-what-is-and-is-not-running-here).</sub>
 
 ---
 
@@ -63,13 +69,14 @@ All numbers below are reproducible with a single `make` target and come from rea
 | Control-loop latency (full PERCEIVE→VERIFY cycle) | **p95 0.44 ms**, p99 0.90 ms | `make eval` |
 | Gazebo pick-and-place, from pixels + joint feedback | INIT→…→VERIFY→**DONE in 12.2 s**, placement error 14 px | `make ros-up` |
 | Gazebo visual servo to target | SUCCEEDED in 1.8 s | `make ros-up` |
+| **Language-conditioned multi-task BC** (frozen MiniLM + ResNet18x2, ONE checkpoint, 3 LIBERO spatial tasks) | **50% / 58% / 42%** per task (150 eps); wrong-instruction ablation **50%→38%** proves the conditioning is load-bearing | `make bc-lang-eval` |
 | **7-DOF Panda arm** pick-and-place (resolved-rate control, moveit_py jacobian, suction + joint feedback) | APPROACH→…→**DONE in 32.9 s**, placement error 7 px | `make ros-panda` |
 | **SmolVLA-450M, a REAL VLA, local MPS inference** (LIBERO-finetuned, served from a second venv over HTTP, first non-degraded model backend) | **33/50 = 66%** on official init states via the agent runtime; chunk forward 563 ms p50, 12 validator clamps | `make smolvla-serve` + `make smolvla-eval` |
 | Gazebo fault injection (real: joint released / occluder model spawned) | suction loss mid-transport → detected in **40 ms** from joint feedback → re-grasp → DONE; 4 s occlusion → target-lost → 2 recoveries → DONE | `fault_inject.py` in the container |
 | **LIBERO behaviour-cloning baseline** (ResNet18×2+MLP, 50 demos, one task, trained on MPS in 19 min — a learned policy, **not a VLA**) | **50 % (25/50)** success over 50 official init states, 7–15 ms/step inference | `make bc-data bc-train bc-eval` |
 | LIBERO simulation on Apple silicon | 24 ms/step (two 256² cameras, `MUJOCO_GL=cgl`) | `make setup-libero` |
 | Learned detector (YOLO11n, synthetic data, MPS) | P 0.996 / R 0.996 on 150 held-out synthetic frames (colour thresholds: 0.967 / 0.963); ~9 ms per frame; 40 epochs ≈ 10 min | `make yolo` |
-| Test suite | 81 tests (LIBERO/YOLO/BC-dependent ones skip themselves without the deps) | `make test` |
+| Test suite | 113 tests (LIBERO/YOLO/BC-dependent ones skip themselves without the deps) | `make test` |
 
 The eval report's `provenance` field states explicitly that these measure the **agent runtime**, not any VLA.
 
@@ -119,6 +126,7 @@ The project was built in verifiable stages; each has a doc with what was measure
 | 3+ | Learned perception (YOLO11n on auto-labelled synthetic data), optional LLM planner | ✅ | [06](docs/06-perception-yolo.md) |
 | 3+++ | **A real VLA on this laptop**: SmolVLA-450M backend, `degraded=False` for the first time; BC 50% vs SmolVLA 66% vs OpenVLA-7B 84.7% (lit.) | ✅ | [10](docs/10-smolvla.md) |
 | 3++ | **Paths beyond the VLA**: LIBERO behaviour-cloning baseline trained and evaluated locally; real fault injection in Gazebo; the gripper-sign contract bug it exposed | ✅ | [08](docs/08-bc-baseline.md) · [03](docs/03-ros2-gazebo.md) |
+| 3++ | **Language-conditioned BC**: one checkpoint, three instructions, honest wrong-instruction ablation (language helps -12pp; vision still dominates) | ✅ | [11](docs/11-language-bc.md) |
 | 4 | Real OpenVLA inference + LIBERO evaluation, LoRA fine-tune | 📄 documented, needs a GPU | [04](docs/04-real-openvla.md) |
 | ↗ | **Spin-off**: [lerobot-dataset-lint](https://github.com/easyrider11/lerobot-dataset-lint) - the gripper-contract lesson turned into a community linter for LeRobot datasets (19 rules, validated on 6 hub datasets) | ✅ | - |
 
@@ -147,7 +155,7 @@ src/rvc/
   service/                  app.py (FastAPI + panel) · vla_server.py (GPU-side inference server)
   runners/                  audit · demo_libero · eval · play · bc (data/train/eval)
 ros2_ws/                    Dockerfile · compose · rvc_agent (SDF world, launch, agent_node, frame_grab, fault_inject)
-tests/                      81 tests
+tests/                      113 tests
 docs/                       stage docs 00–08 + assets
 scripts/                    setup_libero.sh · setup_ros2.sh · smoke_api.sh
 ```

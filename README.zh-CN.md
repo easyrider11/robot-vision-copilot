@@ -5,13 +5,19 @@
 [English README](README.md) · [文档](docs/) · [60 秒上手](#60-秒上手) · [什么是真的、什么是降级](#诚实降级什么在真的跑什么没有)
 
 <p align="center">
-  <img src="docs/assets/gazebo-pickplace.gif" width="256" alt="Gazebo 抓取放置">
-  &nbsp;&nbsp;
-  <img src="docs/assets/tabletop-grasp-slip-recovery.gif" width="256" alt="桌面仿真：注入滑落后恢复">
-  &nbsp;&nbsp;
-  <img src="docs/assets/libero-bc-success.gif" width="128" alt="LIBERO：行为克隆基线回放">
+  <img src="docs/assets/panda-pickplace.gif" width="240" alt="Franka Panda 七自由度抓取放置">
+  &nbsp;
+  <img src="docs/assets/smolvla-libero.gif" width="150" alt="SmolVLA-450M 本机运行 LIBERO">
+  &nbsp;
+  <img src="docs/assets/tabletop-grasp-slip-recovery.gif" width="240" alt="桌面仿真：注入滑落后恢复">
 </p>
-<p align="center"><sub>左：Gazebo 里纯像素闭环的 pick-and-place（吸附抓取 + 关节反馈确认 + 像素验收，12.2 秒）。中：桌面仿真中途注入滑落 —— agent 检测到、重规划、完成任务。右：LIBERO：本机训出来的行为克隆基线把碗拿起放到盘子上。</sub></p>
+<p align="center"><sub>左：真实七自由度 Franka Panda，基于 moveit_py 雅可比的 resolved-rate 控制 —— 32.9 秒，放置误差 7 像素。中：SmolVLA-450M，一个真正的视觉-语言-动作模型，在 Apple 芯片上本机运行官方 LIBERO 基准。右：搬运途中注入滑落，Agent 检测到、重规划、完成任务。</sub></p>
+
+|  | | |
+|---|---|---|
+| **66 %** SmolVLA-450M @ LIBERO<br><sub>真实 VLA，本机 MPS · BC 基线 50 % · OpenVLA-7B 文献 84.7 %</sub> | **500 / 500** 回合，100 % 恢复率<br><sub>其中 375 回合注入故障 · 17,478 次策略调用中 0 个非法动作抵达执行</sub> | **7 像素** 七自由度机械臂放置误差<br><sub>Gazebo 中的 Franka Panda，32.9 秒，零恢复</sub> |
+
+<sub>本页每一个数字都来自仓库中已提交的运行产物，且都能用单条 `make` 命令复现。凡是用替代品顶替真实组件的地方，一律标注 `degraded=true` 并给出原因 —— 见[诚实说明](#诚实说明这里到底跑的是什么)。</sub>
 
 ---
 
@@ -63,6 +69,7 @@ OpenVLA 这类视觉-语言-动作模型只回答一个问题：*给定这张相
 | 控制环时延（完整 PERCEIVE→VERIFY 一圈） | **p95 0.44 ms**，p99 0.90 ms | `make eval` |
 | Gazebo 抓取放置（像素 + 关节反馈） | INIT→…→VERIFY→**DONE，12.2 秒**，放置偏差 14 px | `make ros-up` |
 | Gazebo 视觉伺服到达 | SUCCEEDED，1.8 秒 | `make ros-up` |
+| **语言条件多任务 BC**（冻结 MiniLM + ResNet18×2，一个检查点、3 个 LIBERO spatial 任务） | 逐任务 **50% / 58% / 42%**（150 回合）；错误指令消融 **50%→38%** 证明语言条件在承重 | `make bc-lang-eval` |
 | **7-DOF Panda 机械臂** pick-and-place（resolved-rate 控制、moveit_py 雅可比、吸附+关节反馈） | APPROACH→…→**DONE，32.9 秒**，放置偏差 7px | `make ros-panda` |
 | **SmolVLA-450M 真 VLA 本机 MPS 推理**（LIBERO 微调，独立 venv 经 HTTP 服务，首个非降级模型后端） | 官方初始状态 **33/50 = 66%**（经 agent 运行时）；chunk 前向 p50 563 ms，校验器限幅 12 次 | `make smolvla-serve` + `make smolvla-eval` |
 | Gazebo 真实故障注入（关节真松开 / 真生成遮挡模型） | 搬运中吸附失效 → 关节反馈 **40 ms** 判定 → 再抓 → DONE；4 秒遮挡 → 目标丢失 → 2 次恢复 → DONE | 容器内 `fault_inject.py` |
@@ -119,6 +126,7 @@ make bc-data bc-train bc-eval         # LIBERO 行为克隆基线：示教 -> MP
 | 3+ | 学习型感知（YOLO11n 微调于自动标注合成数据）、可选 LLM 规划器 | ✅ | [06](docs/06-perception-yolo.md) |
 | 3+++ | **真 VLA 上本机**：SmolVLA-450M 后端，第一次 `degraded=False`；BC 50% vs SmolVLA 66% vs OpenVLA-7B 84.7%（文献） | ✅ | [10](docs/10-smolvla.md) |
 | 3++ | **VLA 之外的路径**：本机训练并评测的 LIBERO 行为克隆基线；Gazebo 真实故障注入；由此暴露的夹爪符号契约 bug | ✅ | [08](docs/08-bc-baseline.md) · [03](docs/03-ros2-gazebo.md) |
+| 3++ | **语言条件 BC**：一个检查点、三条指令，附诚实的错误指令消融（语言贡献 −12pp；视觉仍主导） | ✅ | [11](docs/11-language-bc.md) |
 | 4 | 真实 OpenVLA 推理 + LIBERO 评测、LoRA 微调 | 📄 已文档化，需要 GPU | [04](docs/04-real-openvla.md) |
 | ↗ | **衍生工具**：[lerobot-dataset-lint](https://github.com/easyrider11/lerobot-dataset-lint) —— 夹爪契约那一课变成了给 LeRobot 数据集社区的 linter（19 条规则，6 个真实数据集验证） | ✅ | - |
 
@@ -147,7 +155,7 @@ src/rvc/
   service/                  app.py（FastAPI + 面板）· vla_server.py（GPU 侧推理服务）
   runners/                  audit · demo_libero · eval · play · bc（data/train/eval）
 ros2_ws/                    Dockerfile · compose · rvc_agent（SDF 世界、launch、agent_node、frame_grab、fault_inject）
-tests/                      81 个测试
+tests/                      113 个测试
 docs/                       阶段文档 00–08 + 资产
 scripts/                    setup_libero.sh · setup_ros2.sh · smoke_api.sh
 ```
